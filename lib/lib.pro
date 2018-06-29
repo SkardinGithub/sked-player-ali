@@ -1,6 +1,6 @@
 TEMPLATE = lib
 TARGET = skedplayer
-CONFIG += shared
+CONFIG += staticlib
 CONFIG += c++11
 CONFIG += debug
 

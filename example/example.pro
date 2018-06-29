@@ -20,7 +20,7 @@ message(STAGING_DIR: ${{STAGING_DIR}})
 
 INCLUDEPATH += $${STAGING_DIR}/usr/include
 LIBS += -L../build -lskedplayer
-LIBS += -L$${STAGING_DIR}/usr/qml/QtQuick.2 -lqtquick2plugin
+LIBS += -L$${STAGING_DIR}/usr/qml/QtQuick.2 -lqtquick2plugin -lnmpgoplayer -lalislsnd
 
 target.path = /opt/$${TARGET}/bin
 INSTALLS += target
