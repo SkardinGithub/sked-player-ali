@@ -21,5 +21,7 @@ INCLUDEPATH += $${STAGING_DIR}/usr/include
 INCLUDEPATH += $${STAGING_DIR}/usr/include/aliplatform
 LIBS += -L$${STAGING_DIR}/usr/lib -lnmpgoplayer -lalislsnd
 
+headers.files = skedplayer.h
+headers.path  = /usr/include
 target.path = /usr/lib
-INSTALLS += target
+INSTALLS += target headers
