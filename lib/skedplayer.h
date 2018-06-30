@@ -51,7 +51,7 @@ signals:
     void buffering(int percent);
     void error(int type);
 
-public slots:
+private slots:
     void onEnded();
 
 private:

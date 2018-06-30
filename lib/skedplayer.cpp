@@ -24,55 +24,53 @@ SkedPlayer::SkedPlayer(QObject *parent) : QObject(parent)
 SkedPlayer::~SkedPlayer()
 {
   qDebug() << "skedplayer destructor";
-  goplayer_close();
+  if (m_state != STATE_STOP) goplayer_close();
 }
 
 void SkedPlayer::setSrc(const QString &src)
 {
   qDebug() << "skedplayer set source" << src;
-  goplayer_close();
   m_src = src;
-  m_playback_rate = 1;
   m_start_time = 0;
-  m_state = STATE_STOP;
-  emit rateChange();
-  emit stateChange();
+  m_playback_rate = 1;
+  if (m_state != STATE_STOP) {
+    goplayer_close();
+    m_state = STATE_STOP;
+    emit stateChange();
+  }
 }
 
 void SkedPlayer::stop()
 {
   qDebug() << "skedplayer stop";
-
-  // measure for bug#8006
-  QElapsedTimer timer;
-  timer.start();
-  goplayer_close();
-  qDebug() << "\n\n\n\n\ngoplayer_close took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
-
   m_playback_rate = 1;
-  m_state = STATE_STOP;
-  emit stateChange();
+  if (m_state != STATE_STOP) {
+    goplayer_close();
+    m_state = STATE_STOP;
+    emit stateChange();
+  }
 }
 
 void SkedPlayer::load()
 {
   qDebug() << "skedplayer load" << m_src << "from position" << m_start_time;
+  if (m_state == STATE_LOADED) return;
   if (m_src.isEmpty()) return;
-  goplayer_close();
-
+  m_duration = -1;
   // measure for bug#8006
   QElapsedTimer timer;
   timer.start();
+  if (m_state != STATE_STOP) goplayer_close();
   goplayer_open(_callback);
-  qDebug() << "\n\n\n\n\ngoplayer_open took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
-
+  qDebug() << "\n\n\n\n\nload took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
   goplayer_set_source_uri(qPrintable(m_src), m_start_time * 1000, eSTREAM_PROTOCOL_UNKNOW);
+  m_start_time = 0;
   if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
   goplayer_set_subtitle_display(false);
-  m_start_time = 0;
-  m_duration = -1;
   goplayer_play(0);
   m_state = STATE_LOADED;
+  emit rateChange();
+  emit displayRectChange();
   emit stateChange();
 }
 
@@ -207,13 +205,6 @@ void SkedPlayer::setPlayBackRate(double rate)
   emit rateChange();
 }
 
-void SkedPlayer::onEnded()
-{
-  qDebug() << "skedplayer ended";
-  m_state = STATE_ENDED;
-  emit stateChange();
-}
-
 void SkedPlayer::setDisplayRect(const QRect & rect)
 {
   qDebug() << "skedplayer set display rect" << rect;
@@ -229,6 +220,13 @@ void SkedPlayer::setFullScreen(bool full)
   QRect rect = (m_fullscreen ? QRect(0, 0, 1280, 720) : m_displayrect);
   goplayer_set_display_rect(rect.left(), rect.top(), rect.width(), rect.height());
   emit displayRectChange();
+}
+
+void SkedPlayer::onEnded()
+{
+  qDebug() << "skedplayer onEnded";
+  m_state = STATE_ENDED;
+  emit stateChange();
 }
 
 void _callback(eGOPLAYER_CALLBACK_TYPE type, void *data)
