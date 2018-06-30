@@ -40,6 +40,11 @@ Rectangle {
       console.log('[mediaplayer] play channel ' + root.channel);
       var srcs = sources();
       if (root.channel < srcs.length) {
+        Player.stop();
+        buffer.text = ""
+        progress.text = ""
+        rate.text = ""
+        error.text = ""
         Player.src = srcs[root.channel][1];
         //Player.currentTime = 30.0;
         //Player.displayrect = Qt.rect(320, 180, 640, 360);
@@ -57,7 +62,9 @@ Rectangle {
       if (state === Player.STATE_STOP) {
         progress.text = ''
       } else {
-        progress.text = Math.round(Player.currentTime) + '/' + Math.max(Math.round(Player.duration), 0)
+        var currentTime = Player.currentTime;
+        if (Player.currentTime >= 0)
+          progress.text = Math.round(currentTime) + '/' + Math.max(Math.round(Player.duration), 0)
       }
     }
   }
@@ -264,13 +271,14 @@ Rectangle {
       console.log('[mediaplayer] event statechange ' + Player.state)
       switch (Player.state) {
       case Player.STATE_LOADED:
-        error.text = ""
-        progress.text = ""
+        rate.text = (Player.rate === 1 ? '' : Player.rate + 'X')
         progressTimer.restart()
         break;
       case Player.STATE_STOP:
         progressTimer.stop()
+        buffer.text = ""
         progress.text = ""
+        rate.text = ""
         error.text = ""
         break;
       case Player.STATE_PAUSED:

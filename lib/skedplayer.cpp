@@ -45,7 +45,10 @@ void SkedPlayer::stop()
   qDebug() << "skedplayer stop";
   m_playback_rate = 1;
   if (m_state != STATE_STOP) {
+    QElapsedTimer timer; // measure for bug#8006
+    timer.start();
     goplayer_close();
+    qDebug() << "\n\n\n\n\ngoplayer_close() took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
     m_state = STATE_STOP;
     emit stateChange();
   }
@@ -57,12 +60,17 @@ void SkedPlayer::load()
   if (m_state == STATE_LOADED) return;
   if (m_src.isEmpty()) return;
   m_duration = -1;
-  // measure for bug#8006
-  QElapsedTimer timer;
-  timer.start();
-  if (m_state != STATE_STOP) goplayer_close();
+  QElapsedTimer timer; // measure for bug#8006
+  if (m_state != STATE_STOP) {
+    timer.start();
+    goplayer_close();
+    qDebug() << "\n\n\n\n\ngoplayer_close() took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
+    m_state = STATE_STOP;
+    emit stateChange();
+  }
+  timer.restart();
   goplayer_open(_callback);
-  qDebug() << "\n\n\n\n\nload took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
+  qDebug() << "\n\n\n\n\ngoplayer_open() took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
   goplayer_set_source_uri(qPrintable(m_src), m_start_time * 1000, eSTREAM_PROTOCOL_UNKNOW);
   m_start_time = 0;
   if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
@@ -99,7 +107,9 @@ double SkedPlayer::getCurrentTime()
 {
   if (m_state == STATE_STOP) return -1;
   if (m_state == STATE_ENDED) return m_duration;
-  return goplayer_get_current_time() / 1000.0;
+  int currentTime = goplayer_get_current_time();
+  if (currentTime >= 0) return currentTime / 1000.0;
+  return -1;
 }
 
 bool SkedPlayer::seekable()
