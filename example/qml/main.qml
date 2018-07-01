@@ -35,11 +35,12 @@ Rectangle {
 
   Timer {
     id: channelTimer
-    interval: 100; running: false; repeat: false;
+    interval: 50; running: false; repeat: false;
     onTriggered: {
       console.log('[mediaplayer] play channel ' + root.channel);
       var srcs = sources();
       if (root.channel < srcs.length) {
+        var startTime = new Date().getTime()
         Player.stop();
         buffer.text = ""
         progress.text = ""
@@ -50,6 +51,7 @@ Rectangle {
         //Player.displayrect = Qt.rect(320, 180, 640, 360);
         Player.load();
         Player.play();
+        console.log("start time: " + (new Date().getTime() - startTime) + "ms");
       }
     }
   }
