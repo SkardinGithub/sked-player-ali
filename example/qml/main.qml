@@ -40,12 +40,13 @@ Rectangle {
       console.log('[mediaplayer] play channel ' + root.channel);
       var srcs = sources();
       if (root.channel < srcs.length) {
-        var startTime = new Date().getTime()
+        var startTime = new Date().getTime();
+        progressTimer.stop();
         Player.stop();
-        buffer.text = ""
-        progress.text = ""
-        rate.text = ""
-        error.text = ""
+        buffer.text = "";
+        progress.text = "";
+        rateText.text = "";
+        error.text = "";
         Player.src = srcs[root.channel][1];
         //Player.currentTime = 30.0;
         //Player.displayrect = Qt.rect(320, 180, 640, 360);
@@ -60,14 +61,9 @@ Rectangle {
     id: progressTimer
     interval: 1000; running: false; repeat: true
     onTriggered: {
-      var state = Player.state;
-      if (state === Player.STATE_STOP) {
-        progress.text = ''
-      } else {
-        var currentTime = Player.currentTime;
-        if (Player.currentTime >= 0)
-          progress.text = Math.round(currentTime) + '/' + Math.max(Math.round(Player.duration), 0)
-      }
+      var currentTime = Player.currentTime;
+      if (currentTime >= 0)
+        progress.text = Math.round(currentTime) + '/' + Math.max(Math.round(Player.duration), 0)
     }
   }
 
@@ -154,8 +150,8 @@ Rectangle {
         width: 200
       }
       Text { color: "white"; font.bold: true; font.pointSize: 24;
-        id: rate
-        text: (Player.rate === 1 ? '' : Player.rate + 'X')
+        id: rateText
+        text: ""
         width: 100
       }
       Text { color: "white"; font.bold: true; font.pointSize: 24;
@@ -194,11 +190,17 @@ Rectangle {
       break;
     case Qt.Key_Right:
       console.log('[mediaplayer] seek +10')
-      if (Player.seekable && Player.currentTime < Player.duration - 10) Player.currentTime += 10.0;
+      if (Player.seekable) {
+        var currentTime = Player.currentTime;
+        if (currentTime < Player.duration - 10) Player.currentTime = currentTime + 10.0;
+      }
       break;
     case Qt.Key_Left:
       console.log('[mediaplayer] seek -10')
-      if (Player.seekable && Player.currentTime > 10) Player.currentTime -= 10.0;
+      if (Player.seekable) {
+        var currentTime = Player.currentTime;
+        if (currentTime > 10) Player.currentTime = currentTime - 10.0;
+      }
       break;
     case Qt.Key_VolumeUp:
       console.log('[mediaplayer] volume up')
@@ -218,7 +220,7 @@ Rectangle {
         case 2: Player.rate = 1; break;
         default: Player.rate -= 2;
       }
-      console.log('[mediaplayer] FRW %sX', Player.rate)
+      console.log('[mediaplayer] FRW ' + Player.rate + 'X')
       break;
     case Qt.Key_MediaNext: // RCU FFW
       switch (Player.rate) {
@@ -226,7 +228,7 @@ Rectangle {
         case 1: Player.rate = 2; break;
         default: Player.rate += 2;
       }
-      console.log('[mediaplayer] FFW %sX', Player.rate)
+      console.log('[mediaplayer] FFW ' + Player.rate + 'X')
       break;
     case Qt.Key_Down:
       console.log('[mediaplayer] zoom in')
@@ -270,17 +272,17 @@ Rectangle {
     target: Player
 
     onStateChange: {
-      console.log('[mediaplayer] event statechange ' + Player.state)
-      switch (Player.state) {
+      console.log('[mediaplayer] event statechange ' + newState)
+      switch (newState) {
       case Player.STATE_LOADED:
-        rate.text = (Player.rate === 1 ? '' : Player.rate + 'X')
+        rateText.text = (Player.rate === 1 ? '' : Player.rate + 'X')
         progressTimer.restart()
         break;
       case Player.STATE_STOP:
         progressTimer.stop()
         buffer.text = ""
         progress.text = ""
-        rate.text = ""
+        rateText.text = ""
         error.text = ""
         break;
       case Player.STATE_PAUSED:
@@ -295,6 +297,11 @@ Rectangle {
       console.log('[mediaplayer] event buffering ' + percent)
       if (percent === 100) buffer.text = ""
       else buffer.text = "buffering " + percent + "%"
+    }
+
+    onRateChange: {
+      console.log('[mediaplayer] event rate change ' + rate)
+      rateText.text = (rate === 1 ? '' : rate + 'X')
     }
 
     onError: {

@@ -44,10 +44,10 @@ public:
     Q_ENUM(ERROR)
 
 signals:
-    void stateChange();
-    void rateChange();
-    void volumeChange();
-    void displayRectChange();
+    void stateChange(int oldState, int newState);
+    void rateChange(double rate);
+    void volumeChange(bool mute, double vol);
+    void displayRectChange(bool fullscreen, const QRect & rect);
     void buffering(int percent);
     void error(int type);
 
@@ -77,7 +77,7 @@ private:
     static SkedPlayer *m_instance;
     QString m_src;
     enum STATE m_state;
-    int m_playback_rate;
+    double m_playback_rate;
     QRect m_displayrect;
     bool m_fullscreen;
     double m_start_time;
