@@ -49,6 +49,7 @@ Rectangle {
         error.text = "";
         Player.src = srcs[root.channel][1];
         //Player.currentTime = 30.0;
+        //Player.fullscreen = false;
         //Player.displayrect = Qt.rect(320, 180, 640, 360);
         Player.load();
         Player.play();

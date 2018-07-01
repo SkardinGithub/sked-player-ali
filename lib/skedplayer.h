@@ -53,6 +53,8 @@ signals:
 
 private slots:
     void onEnded();
+    void onStateChange(int state);
+    void onBuffering(int percent);
 
 private:
     QString getSrc() const { return m_src; }
@@ -82,5 +84,6 @@ private:
     bool m_fullscreen;
     double m_start_time;
     double m_duration;
+    bool m_inited;
 };
 #endif // SKEDPLAYER_H

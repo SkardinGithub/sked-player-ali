@@ -62,6 +62,7 @@ void SkedPlayer::load()
   qDebug() << "skedplayer load" << m_src << "from position" << m_start_time;
   if (m_state == STATE_LOADED) return;
   if (m_src.isEmpty()) return;
+  m_inited = false;
   m_duration = -1;
   QElapsedTimer timer; // measure for bug#8006
   if (m_state != STATE_STOP) {
@@ -77,9 +78,9 @@ void SkedPlayer::load()
   qDebug() << "\n\n\n\n\ngoplayer_open() took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
   goplayer_set_source_uri(qPrintable(m_src), m_start_time * 1000, eSTREAM_PROTOCOL_UNKNOW);
   m_start_time = 0;
-  if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
-  goplayer_set_subtitle_display(false);
-  goplayer_play(0);
+  //if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
+  //goplayer_set_subtitle_display(false);
+  //goplayer_play(0);
   emit rateChange(m_playback_rate);
   emit displayRectChange(m_fullscreen, m_displayrect);
   enum STATE oldState = m_state;
@@ -230,7 +231,8 @@ void SkedPlayer::setDisplayRect(const QRect & rect)
 {
   qDebug() << "skedplayer set display rect" << rect;
   m_displayrect = rect;
-  if (! m_fullscreen) goplayer_set_display_rect(rect.left(), rect.top(), rect.width(), rect.height());
+  if (! m_fullscreen && m_state != STATE_STOP)
+    goplayer_set_display_rect(rect.left(), rect.top(), rect.width(), rect.height());
   emit displayRectChange(m_fullscreen, m_displayrect);
 }
 
@@ -239,7 +241,8 @@ void SkedPlayer::setFullScreen(bool full)
   qDebug() << "skedplayer" << (full ? "enter" : "leave") << "fullscreen";
   m_fullscreen = full;
   QRect rect = (m_fullscreen ? QRect(0, 0, 1280, 720) : m_displayrect);
-  goplayer_set_display_rect(rect.left(), rect.top(), rect.width(), rect.height());
+  if (m_state != STATE_STOP)
+    goplayer_set_display_rect(rect.left(), rect.top(), rect.width(), rect.height());
   emit displayRectChange(m_fullscreen, m_displayrect);
 }
 
@@ -249,6 +252,28 @@ void SkedPlayer::onEnded()
   enum STATE oldState = m_state;
   m_state = STATE_ENDED;
   emit stateChange(oldState, m_state);
+}
+
+void SkedPlayer::onStateChange(int state)
+{
+  if (state == eGOPLAYER_STATE_PAUSE) {
+    if (!m_inited) {
+      if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
+      //goplayer_play(0);
+      m_inited = true;
+    }
+  } else if (state == eGOPLAYER_STATE_PLAY) {
+    if (m_state == STATE_LOADED || m_state == STATE_PAUSED) {
+      goplayer_play(0);
+    }
+  }
+}
+
+void SkedPlayer::onBuffering(int percent)
+{
+  if (m_state == STATE_PLAY) {
+    emit buffering(percent);
+  }
 }
 
 void _callback(eGOPLAYER_CALLBACK_TYPE type, void *data)
@@ -263,13 +288,14 @@ void _callback(eGOPLAYER_CALLBACK_TYPE type, void *data)
     } else {
       qDebug() << "[callback] state: stop";
     }
+    QMetaObject::invokeMethod(SkedPlayer::singleton(), "onStateChange", Qt::QueuedConnection, Q_ARG(int, state));
   }
     break;
 
   case eGOPLAYER_CBT_BUFFERING: {
     int percent = (int)data;
     qDebug() << "[callback] buffering:" << percent;
-    QMetaObject::invokeMethod(SkedPlayer::singleton(), "buffering", Qt::QueuedConnection, Q_ARG(int, percent));
+    QMetaObject::invokeMethod(SkedPlayer::singleton(), "onBuffering", Qt::QueuedConnection, Q_ARG(int, percent));
   }
     break;
 
