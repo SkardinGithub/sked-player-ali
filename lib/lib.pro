@@ -14,8 +14,8 @@ DESTDIR     = ../build
 SOURCES += skedplayer.cpp
 HEADERS += skedplayer.h
 
-STAGING_DIR = $$(STAGING_DIR)
-message(STAGING_DIR: ${{STAGING_DIR}})
+STAGING_DIR = $(STAGING_DIR)
+message(STAGING_DIR: $${STAGING_DIR})
 
 INCLUDEPATH += $${STAGING_DIR}/usr/include
 INCLUDEPATH += $${STAGING_DIR}/usr/include/aliplatform
