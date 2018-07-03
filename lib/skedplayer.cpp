@@ -3,6 +3,7 @@
 extern "C" {
 #include <goplayer.h>
 #include <alislsnd.h>
+#include <aui_dis.h>
 }
 
 SkedPlayer * SkedPlayer::m_instance = NULL;
@@ -51,6 +52,7 @@ void SkedPlayer::stop()
     timer.start();
     goplayer_close();
     qDebug() << "\n\n\n\n\ngoplayer_close() took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
+    enableVideo(false);
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
     emit stateChange(oldState, m_state);
@@ -246,6 +248,35 @@ void SkedPlayer::setFullScreen(bool full)
   emit displayRectChange(m_fullscreen, m_displayrect);
 }
 
+void SkedPlayer::enableVideo(bool on)
+{
+  qDebug() << "skedplayer" << (on ? "enable" : "disable") << "display";
+  void *dis_hdl_hd = 0;
+  aui_attr_dis attr_dis_hd;
+  memset(&attr_dis_hd, 0, sizeof(attr_dis_hd));
+  attr_dis_hd.uc_dev_idx = AUI_DIS_HD;
+
+  if(0 != aui_find_dev_by_idx(AUI_MODULE_DIS, 0, &dis_hdl_hd)) {
+    if(0 != aui_dis_open(&attr_dis_hd, &dis_hdl_hd)) {
+      qWarning() << "skedplayer aui_dis_open fail";
+      return;
+    }
+  }
+
+  aui_dis_fill_black_screen(dis_hdl_hd);
+
+  if(0 != aui_dis_video_enable(dis_hdl_hd, on)) {
+    qWarning() << "skedplayer aui_dis_video_enable fail";
+    aui_dis_close(&attr_dis_hd, &dis_hdl_hd);
+    return;
+  }
+
+  if(0 != aui_dis_close(&attr_dis_hd, &dis_hdl_hd)) {
+    qWarning() << "skedplayer aui_dis_close fail";
+    return;
+  }
+}
+
 void SkedPlayer::onEnded()
 {
   qDebug() << "skedplayer onEnded";
@@ -256,13 +287,12 @@ void SkedPlayer::onEnded()
 
 void SkedPlayer::onStateChange(int state)
 {
-  if (state == eGOPLAYER_STATE_PAUSE) {
+  if (state == eGOPLAYER_STATE_PLAY) {
     if (!m_inited) {
       if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
-      //goplayer_play(0);
+      enableVideo(true);
       m_inited = true;
     }
-  } else if (state == eGOPLAYER_STATE_PLAY) {
     if (m_state == STATE_LOADED || m_state == STATE_PAUSED) {
       goplayer_play(0);
     }
@@ -271,7 +301,7 @@ void SkedPlayer::onStateChange(int state)
 
 void SkedPlayer::onBuffering(int percent)
 {
-  if (m_state == STATE_PLAY) {
+  if (percent == 100 || m_state == STATE_PLAY) {
     emit buffering(percent);
   }
 }
