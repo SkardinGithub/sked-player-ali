@@ -21,7 +21,7 @@ case $1 in
     [ -f example/skedplayer_qml_plugin_import.cpp ] && rm example/skedplayer_qml_plugin_import.cpp;
     ;;
   qmake)
-    ../../host/usr/bin/qmake "CONFIG+=example"
+    ../../host/usr/bin/qmake "CONFIG+=example debug"
     ;;
   make)
     make

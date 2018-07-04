@@ -2,7 +2,7 @@ TEMPLATE = lib
 TARGET = skedplayer
 CONFIG += staticlib
 CONFIG += c++11
-CONFIG += debug
+#CONFIG += debug
 
 # Build directory
 OBJECTS_DIR = ../build
