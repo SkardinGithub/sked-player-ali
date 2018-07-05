@@ -1,5 +1,6 @@
 #include "skedplayer.h"
 #include <QtCore>
+#include <stdlib.h>
 extern "C" {
 #include <goplayer.h>
 #include <alislsnd.h>
@@ -19,6 +20,11 @@ SkedPlayer::SkedPlayer(QObject *parent) : QObject(parent)
   m_playback_rate = 1;
   m_fullscreen = true;
   m_displayrect = QRect(0, 0, 1280, 720);
+  setenv("GST_REGISTRY", "/tmp/gst_registry.bin", 0);
+  if (!getenv("OMX_BELLAGIO_REGISTRY")) {
+    setenv("OMX_BELLAGIO_REGISTRY", "/tmp/omx_bellagio_registry", 0);
+    QProcess::execute("omxregister-bellagio", QStringList() << "/usr/lib/bellagio/");
+  }
   SkedPlayer::m_instance = this;
 }
 

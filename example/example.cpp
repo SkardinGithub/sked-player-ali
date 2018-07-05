@@ -6,21 +6,18 @@
 
 Q_IMPORT_PLUGIN(QtQuick2Plugin)
 
-SkedPlayer *gPlayer = NULL;
-
 static QObject *skedplayer_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
   Q_UNUSED(engine)
   Q_UNUSED(scriptEngine)
-
-  return gPlayer;
+  return SkedPlayer::singleton();
 }
 
 int main(int argc, char *argv[])
 {
   QApplication app(argc, argv);
-  gPlayer = new SkedPlayer();
 
+  new SkedPlayer();
   qmlRegisterSingletonType<SkedPlayer>("SKED.MediaPlayer", 1, 0, "Player", skedplayer_singletontype_provider);
 
   QQuickView view;
