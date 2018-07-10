@@ -3,7 +3,7 @@
 #include <stdlib.h>
 extern "C" {
 #include <aui_mp.h>
-#include <alislsnd.h>
+#include <aui_snd.h>
 #include <aui_dis.h>
 }
 
@@ -179,67 +179,6 @@ void SkedPlayer::setCurrentTime(double time)
   }
 }
 
-void SkedPlayer::setVolume(double vol)
-{
-  // TODO: use aui API
-  qDebug() << "skedplayer setVolume" << vol;
-  void *hsnd;
-  if (0 == alislsnd_open(&hsnd)) {
-    bool mute;
-    alislsnd_set_volume(hsnd, uint8_t(vol * 100), SND_IO_ALL);
-    alislsnd_get_mute_state(hsnd, SND_IO_ALL, &mute);
-    alislsnd_close(hsnd);
-    emit volumeChange(mute, vol);
-  } else {
-    qWarning() << "skedplayer can not open snd";
-  }
-}
-
-double SkedPlayer::getVolume()
-{
-  // TODO: use aui API
-  void *hsnd;
-  if (0 == alislsnd_open(&hsnd)) {
-    uint8_t vol;
-    alislsnd_get_volume(hsnd, SND_IO_ALL, &vol);
-    alislsnd_close(hsnd);
-    return double(vol) / 100.0;
-  }
-
-  qWarning() << "skedplayer can not open snd";
-  return -1.0;
-}
-
-void SkedPlayer::mute(bool mute)
-{
-  // TODO: use aui API
-  qDebug() << "skedplayer " << (mute ? "mute" : "unmute");
-  void *hsnd;
-  if (0 == alislsnd_open(&hsnd)) {
-    uint8_t vol;
-    alislsnd_set_mute(hsnd, mute, SND_IO_ALL);
-    alislsnd_get_volume(hsnd, SND_IO_ALL, &vol);
-    alislsnd_close(hsnd);
-    emit volumeChange(mute, vol/100.0);
-  } else {
-    qWarning() << "skedplayer can not open snd";
-  }
-}
-
-bool SkedPlayer::muted()
-{
-  // TODO: use aui API
-  void *hsnd;
-  if (0 == alislsnd_open(&hsnd)) {
-    bool mute;
-    alislsnd_get_mute_state(hsnd, SND_IO_ALL, &mute);
-    alislsnd_close(hsnd);
-    return mute;
-  }
-  qWarning() << "skedplayer can not open snd";
-  return false;
-}
-
 double SkedPlayer::duration()
 {
   if (m_state == STATE_STOP) return -1;
@@ -263,6 +202,91 @@ void SkedPlayer::setPlayBackRate(double rate)
   m_playback_rate = r;
   if (m_state == STATE_PLAY) aui_mp_speed_set(m_mp_handle, rateToAuiMpSpeed(m_playback_rate));
   emit rateChange(m_playback_rate);
+}
+
+void SkedPlayer::setVolume(double vol)
+{
+  qDebug() << "skedplayer setVolume" << vol;
+
+  aui_hdl hdl_snd;
+  if (0 != aui_find_dev_by_idx(AUI_MODULE_SND, 0, &hdl_snd)) {
+    aui_attr_snd attr_snd;
+    memset(&attr_snd, 0, sizeof(aui_attr_snd));
+    if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
+      qWarning() << "skedplayer aui_snd_open fail";
+      return;
+    }
+  }
+  if (0 != aui_snd_vol_set(hdl_snd, vol * 100)) {
+    qWarning() << "skedplayer aui_snd_vol_set fail";
+    aui_snd_close(hdl_snd);
+    return;
+  }
+  unsigned char mute;
+  aui_snd_mute_get(hdl_snd, &mute);
+  aui_snd_close(hdl_snd);
+  emit volumeChange(mute, vol);
+}
+
+double SkedPlayer::getVolume()
+{
+  aui_hdl hdl_snd;
+  if (0 != aui_find_dev_by_idx(AUI_MODULE_SND, 0, &hdl_snd)) {
+    aui_attr_snd attr_snd;
+    memset(&attr_snd, 0, sizeof(aui_attr_snd));
+    if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
+      qWarning() << "skedplayer aui_snd_open fail";
+      return 0;
+    }
+  }
+  unsigned char vol = 0;
+  if (0 != aui_snd_vol_get(hdl_snd, &vol)) {
+    qWarning() << "skedplayer aui_snd_vol_get fail";
+  }
+  aui_snd_close(hdl_snd);
+  return vol / 100.0;
+}
+
+void SkedPlayer::mute(bool mute)
+{
+  qDebug() << "skedplayer " << (mute ? "mute" : "unmute");
+  aui_hdl hdl_snd;
+  if (0 != aui_find_dev_by_idx(AUI_MODULE_SND, 0, &hdl_snd)) {
+    aui_attr_snd attr_snd;
+    memset(&attr_snd, 0, sizeof(aui_attr_snd));
+    if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
+      qWarning() << "skedplayer aui_snd_open fail";
+      return;
+    }
+  }
+  if (0 != aui_snd_mute_set(hdl_snd, mute)) {
+    qWarning() << "skedplayer aui_snd_mute_set fail";
+    aui_snd_close(hdl_snd);
+    return;
+  }
+  unsigned char vol;
+  aui_snd_vol_get(hdl_snd, &vol);
+  aui_snd_close(hdl_snd);
+  emit volumeChange(mute, vol/100.0);
+}
+
+bool SkedPlayer::muted()
+{
+  aui_hdl hdl_snd;
+  if (0 != aui_find_dev_by_idx(AUI_MODULE_SND, 0, &hdl_snd)) {
+    aui_attr_snd attr_snd;
+    memset(&attr_snd, 0, sizeof(aui_attr_snd));
+    if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
+      qWarning() << "skedplayer aui_snd_open fail";
+      return true;
+    }
+  }
+  unsigned char mute = 1;
+  if (0 != aui_snd_mute_get(hdl_snd, &mute)) {
+    qWarning() << "skedplayer aui_snd_mute_get fail";
+  }
+  aui_snd_close(hdl_snd);
+  return mute;
 }
 
 void SkedPlayer::setDisplayRect(const QRect & rect)

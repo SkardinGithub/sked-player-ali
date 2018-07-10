@@ -18,8 +18,7 @@ STAGING_DIR = $(STAGING_DIR)
 message(STAGING_DIR: $${STAGING_DIR})
 
 INCLUDEPATH += $${STAGING_DIR}/usr/include
-INCLUDEPATH += $${STAGING_DIR}/usr/include/aliplatform
-LIBS += -L$${STAGING_DIR}/usr/lib -lalislsnd -laui
+LIBS += -L$${STAGING_DIR}/usr/lib -laui
 
 headers.files = skedplayer.h
 headers.path  = /usr/include
