@@ -53,7 +53,7 @@ signals:
 
 private slots:
     void onEnded();
-    void onStateChange(int state);
+    void onStart();
     void onBuffering(int percent);
 
 private:
@@ -86,5 +86,6 @@ private:
     double m_start_time;
     double m_duration;
     bool m_inited;
+    void *m_mp_handle;
 };
 #endif // SKEDPLAYER_H

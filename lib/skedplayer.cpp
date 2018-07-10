@@ -2,20 +2,22 @@
 #include <QtCore>
 #include <stdlib.h>
 extern "C" {
-#include <goplayer.h>
+#include <aui_mp.h>
 #include <alislsnd.h>
 #include <aui_dis.h>
 }
 
 SkedPlayer * SkedPlayer::m_instance = NULL;
 
-void _callback(eGOPLAYER_CALLBACK_TYPE type, void *data);
+static void _callback(aui_mp_message type, void *data, void *userData);
+static enum aui_mp_speed rateToAuiMpSpeed(double rate);
 
 SkedPlayer::SkedPlayer(QObject *parent) : QObject(parent)
 {
   qDebug() << "skedplayer constructor";
   if (SkedPlayer::m_instance)
     return;
+  m_mp_handle = NULL;
   m_state = STATE_STOP;
   m_playback_rate = 1;
   m_fullscreen = true;
@@ -31,7 +33,10 @@ SkedPlayer::SkedPlayer(QObject *parent) : QObject(parent)
 SkedPlayer::~SkedPlayer()
 {
   qDebug() << "skedplayer destructor";
-  if (m_state != STATE_STOP) goplayer_close();
+  if (m_mp_handle) {
+    aui_mp_close(NULL, &m_mp_handle);
+    m_mp_handle = NULL;
+  }
 }
 
 void SkedPlayer::setSrc(const QString &src)
@@ -41,7 +46,10 @@ void SkedPlayer::setSrc(const QString &src)
   m_start_time = 0;
   m_playback_rate = 1;
   if (m_state != STATE_STOP) {
-    goplayer_close();
+    if (m_mp_handle) {
+      aui_mp_close(NULL, &m_mp_handle);
+      m_mp_handle = NULL;
+    }
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
     emit stateChange(oldState, m_state);
@@ -56,8 +64,11 @@ void SkedPlayer::stop()
   if (m_state != STATE_STOP) {
     QElapsedTimer timer; // measure for bug#8006
     timer.start();
-    goplayer_close();
-    qDebug() << "\n\n\n\n\ngoplayer_close() took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
+    if (m_mp_handle) {
+      aui_mp_close(NULL, &m_mp_handle);
+      m_mp_handle = NULL;
+    }
+    qDebug() << "\n\n\n\n\naui_mp_close took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
     enableVideo(false);
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
@@ -75,20 +86,27 @@ void SkedPlayer::load()
   QElapsedTimer timer; // measure for bug#8006
   if (m_state != STATE_STOP) {
     timer.start();
-    goplayer_close();
-    qDebug() << "\n\n\n\n\ngoplayer_close() took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
+    if (m_mp_handle) {
+      aui_mp_close(NULL, &m_mp_handle);
+      m_mp_handle = NULL;
+    }
+    qDebug() << "\n\n\n\n\naui_mp_close took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
     emit stateChange(oldState, m_state);
   }
   timer.restart();
-  goplayer_open(_callback);
-  qDebug() << "\n\n\n\n\ngoplayer_open() took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
-  goplayer_set_source_uri(qPrintable(m_src), m_start_time * 1000, eSTREAM_PROTOCOL_UNKNOW);
+  aui_attr_mp mp_attr;
+  memset(&mp_attr, 0, sizeof(mp_attr));
+  strncpy((char *)mp_attr.uc_file_name, qPrintable(m_src), 1024);
+  mp_attr.stream_protocol = AUI_MP_STREAM_PROTOCOL_UNKNOW;
+  mp_attr.start_time = m_start_time * 1000;
+  mp_attr.aui_mp_stream_cb = _callback;
+  mp_attr.user_data = NULL;
+  aui_mp_open(&mp_attr, &m_mp_handle);
+  aui_mp_start(m_mp_handle);
+  qDebug() << "\n\n\n\n\aui_mp_open + aui_mp_start took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
   m_start_time = 0;
-  //if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
-  //goplayer_set_subtitle_display(false);
-  //goplayer_play(0);
   emit rateChange(m_playback_rate);
   emit displayRectChange(m_fullscreen, m_displayrect);
   enum STATE oldState = m_state;
@@ -102,7 +120,7 @@ void SkedPlayer::play()
   if (m_state == STATE_PLAY) return;
   if (m_src.isEmpty()) return;
   if (m_state == STATE_STOP || m_state == STATE_ENDED) load();
-  goplayer_play(m_playback_rate);
+  aui_mp_speed_set(m_mp_handle, rateToAuiMpSpeed(m_playback_rate));
   enum STATE oldState = m_state;
   m_state = STATE_PLAY;
   emit stateChange(oldState, m_state);
@@ -112,7 +130,7 @@ void SkedPlayer::pause()
 {
   qDebug() << "skedplayer pause";
   if (m_state == STATE_LOADED || m_state == STATE_PLAY) {
-    goplayer_play(0);
+    aui_mp_pause(m_mp_handle);
     enum STATE oldState = m_state;
     m_state = STATE_PAUSED;
     emit stateChange(oldState, m_state);
@@ -123,14 +141,17 @@ double SkedPlayer::getCurrentTime()
 {
   if (m_state == STATE_STOP) return -1;
   if (m_state == STATE_ENDED) return m_duration;
-  int currentTime = goplayer_get_current_time();
-  if (currentTime >= 0) return currentTime / 1000.0;
-  return -1;
+  unsigned int currentTime;
+  if (0 != aui_mp_get_cur_time(m_mp_handle, &currentTime)) return -1;
+  return currentTime / 1000.0;
 }
 
 bool SkedPlayer::seekable()
 {
-  return goplayer_is_seekable();
+  if (m_state == STATE_STOP) return false;
+  int isSeekable;
+  if (0 != aui_mp_is_seekable(m_mp_handle, &isSeekable)) return false;
+  return isSeekable;
 }
 
 void SkedPlayer::setCurrentTime(double time)
@@ -144,7 +165,7 @@ void SkedPlayer::setCurrentTime(double time)
   case STATE_LOADED:
   case STATE_PAUSED:
   case STATE_PLAY:
-    goplayer_seek(time * 1000);
+    aui_mp_seek(m_mp_handle, time * 1000);
     break;
   case STATE_STOP:
     m_start_time = time;
@@ -156,6 +177,7 @@ void SkedPlayer::setCurrentTime(double time)
 
 void SkedPlayer::setVolume(double vol)
 {
+  // TODO: use aui API
   qDebug() << "skedplayer setVolume" << vol;
   void *hsnd;
   if (0 == alislsnd_open(&hsnd)) {
@@ -171,6 +193,7 @@ void SkedPlayer::setVolume(double vol)
 
 double SkedPlayer::getVolume()
 {
+  // TODO: use aui API
   void *hsnd;
   if (0 == alislsnd_open(&hsnd)) {
     uint8_t vol;
@@ -185,6 +208,7 @@ double SkedPlayer::getVolume()
 
 void SkedPlayer::mute(bool mute)
 {
+  // TODO: use aui API
   qDebug() << "skedplayer " << (mute ? "mute" : "unmute");
   void *hsnd;
   if (0 == alislsnd_open(&hsnd)) {
@@ -200,6 +224,7 @@ void SkedPlayer::mute(bool mute)
 
 bool SkedPlayer::muted()
 {
+  // TODO: use aui API
   void *hsnd;
   if (0 == alislsnd_open(&hsnd)) {
     bool mute;
@@ -216,22 +241,23 @@ double SkedPlayer::duration()
   if (m_state == STATE_STOP) return -1;
   if (m_state == STATE_ENDED) return m_duration;
   if (m_duration != -1) return m_duration;
-  int duration = goplayer_get_total_time();
-  if (duration > 0) m_duration = duration / 1000;
+  unsigned int total_time;
+  if (0 != aui_mp_get_total_time(m_mp_handle, &total_time)) return m_duration;
+  m_duration = total_time / 1000.0;
   return m_duration;
 }
 
 void SkedPlayer::setPlayBackRate(double rate)
 {
   qDebug() << "skedplayer set rate" << rate;
-  // range [-128~-2, 0~128] in integer is valid
+  // range [-24~-2, 0~24] in integer is valid
   int r = rate;
-  if ((r < -128) || (r > -2 && r < 0) || (r > 128)) {
-    qWarning() << "skedplayer invalid rate. rate should be integer in range [-128~-2, 0~128]";
+  if ((r < -24) || (r > -2 && r < 0) || (r > 24)) {
+    qWarning() << "skedplayer invalid rate. rate should be integer in range [-24~-2, 0~24]";
     return;
   }
   m_playback_rate = r;
-  if (m_state == STATE_PLAY) goplayer_play(m_playback_rate);
+  if (m_state == STATE_PLAY) aui_mp_speed_set(m_mp_handle, rateToAuiMpSpeed(m_playback_rate));
   emit rateChange(m_playback_rate);
 }
 
@@ -239,18 +265,26 @@ void SkedPlayer::setDisplayRect(const QRect & rect)
 {
   qDebug() << "skedplayer set display rect" << rect;
   m_displayrect = rect;
+  // TODO
+#if 0
   if (! m_fullscreen && m_state != STATE_STOP)
     goplayer_set_display_rect(rect.left(), rect.top(), rect.width(), rect.height());
+#endif
   emit displayRectChange(m_fullscreen, m_displayrect);
 }
 
 void SkedPlayer::setFullScreen(bool full)
 {
-  qDebug() << "skedplayer" << (full ? "enter" : "leave") << "fullscreen";
+  qDebug() << "skedplayer" << "fullscreen" << full;
   m_fullscreen = full;
   QRect rect = (m_fullscreen ? QRect(0, 0, 1280, 720) : m_displayrect);
+  // TODO
+#if 0
   if (m_state != STATE_STOP)
     goplayer_set_display_rect(rect.left(), rect.top(), rect.width(), rect.height());
+#else
+  Q_UNUSED(rect);
+#endif
   emit displayRectChange(m_fullscreen, m_displayrect);
 }
 
@@ -269,6 +303,7 @@ void SkedPlayer::enableVideo(bool on)
     }
   }
 
+  // TODO:
   aui_dis_fill_black_screen(dis_hdl_hd);
 
   if(0 != aui_dis_video_enable(dis_hdl_hd, on)) {
@@ -291,17 +326,17 @@ void SkedPlayer::onEnded()
   emit stateChange(oldState, m_state);
 }
 
-void SkedPlayer::onStateChange(int state)
+void SkedPlayer::onStart()
 {
-  if (state == eGOPLAYER_STATE_PLAY) {
-    if (!m_inited) {
-      if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
-      enableVideo(true);
-      m_inited = true;
-    }
-    if (m_state == STATE_LOADED || m_state == STATE_PAUSED) {
-      goplayer_play(0);
-    }
+  if (!m_inited) {
+#if 0 // TODO
+    if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
+#endif
+    enableVideo(true);
+    m_inited = true;
+  }
+  if (m_state == STATE_LOADED || m_state == STATE_PAUSED) {
+    aui_mp_pause(m_mp_handle);
   }
 }
 
@@ -312,75 +347,92 @@ void SkedPlayer::onBuffering(int percent)
   }
 }
 
-void _callback(eGOPLAYER_CALLBACK_TYPE type, void *data)
+static void _callback(aui_mp_message type, void *data, void *userData)
 {
+  Q_UNUSED(userData);
   switch (type) {
-  case eGOPLAYER_CBT_STATE_CHANGE: {
-    eGOPLAYER_STATE state = (eGOPLAYER_STATE)(int)data;
-    if(state == eGOPLAYER_STATE_PAUSE) {
-      qDebug() << "[callback] state: pause";
-    } else if (state == eGOPLAYER_STATE_PLAY) {
-      qDebug() << "[callback] state: play";
-    } else {
-      qDebug() << "[callback] state: stop";
-    }
-    QMetaObject::invokeMethod(SkedPlayer::singleton(), "onStateChange", Qt::QueuedConnection, Q_ARG(int, state));
-  }
+  case AUI_MP_PLAY_BEGIN:
+    qDebug() << "[callback] PLAY BEGIN";
+    QMetaObject::invokeMethod(SkedPlayer::singleton(), "onStart", Qt::QueuedConnection);
     break;
-
-  case eGOPLAYER_CBT_BUFFERING: {
+  case AUI_MP_PLAY_END:
+    qDebug() << "[callback] PLAY END";
+    QMetaObject::invokeMethod(SkedPlayer::singleton(), "onEnded", Qt::QueuedConnection);
+    break;
+  case AUI_MP_BUFFERING: {
     int percent = (int)data;
     qDebug() << "[callback] buffering:" << percent;
     QMetaObject::invokeMethod(SkedPlayer::singleton(), "onBuffering", Qt::QueuedConnection, Q_ARG(int, percent));
   }
     break;
-
-  case eGOPLAYER_CBT_WARN_UNSUPPORT_AUDIO:
-    qWarning() << "[callback] UNSUPPORT AUDIO";
-    break;
-
-  case eGOPLAYER_CBT_WARN_UNSUPPORT_VIDEO:
+  case AUI_MP_VIDEO_CODEC_NOT_SUPPORT:
     qWarning() << "[callback] UNSUPPORT VIDEO";
     break;
-
-  case eGOPLAYER_CBT_WARN_DECODE_ERR_AUDIO:
-    qWarning() << "[callback] AUDIO DECODE ERROR";
+  case AUI_MP_AUDIO_CODEC_NOT_SUPPORT:
+    qWarning() << "[callback] UNSUPPORT AUDIO";
     break;
-
-  case eGOPLAYER_CBT_WARN_DECODE_ERR_VIDEO:
-    qWarning() << "[callback] VIDEO DECODE ERROR";
+  case AUI_MP_RESOLUTION_NOT_SUPPORT:
+    qWarning() << "[callback] RESOLUTION NOT SUPPORT";
     break;
-
-  case eGOPLAYER_CBT_WARN_TRICK_BOS:
-    qWarning() << "[callback] RW to BOS";
+  case AUI_MP_FRAMERATE_NOT_SUPPORT:
+    qWarning() << "[callback] FRAMERATE NOT SUPPORT";
     break;
-
-  case eGOPLAYER_CBT_WARN_TRICK_EOS:
-    qWarning() << "[callback] FF to EOS";
+  case AUI_MP_NO_MEMORY:
+    qWarning() << "[callback] NO MEMORY";
     break;
-
-  case eGOPLAYER_CBT_ERR_SOUPHTTP:
+  case AUI_MP_DECODE_ERROR:
+    qWarning() << "[callback] DECODE ERROR";
+    QMetaObject::invokeMethod(SkedPlayer::singleton(), "error", Qt::QueuedConnection, Q_ARG(int, SkedPlayer::ERROR_DECODE));
+    break;
+  case AUI_MP_ERROR_UNKNOWN:
+    qWarning() << "[callback] UNKNOW ERROR:" << (char *)data;
+    break;
+  case AUI_MP_ERROR_SOUPHTTP:
     qWarning() << "[callback] Soup http error, code:" << (int)data;
     QMetaObject::invokeMethod(SkedPlayer::singleton(), "error", Qt::QueuedConnection, Q_ARG(int, SkedPlayer::ERROR_NETWORK));
     break;
-
-  case eGOPLAYER_CBT_ERR_TYPE_NOT_FOUND:
-  case eGOPLAYER_CBT_ERR_DEMUX:
-  case eGOPLAYER_CBT_ERR_UNDEFINED:
-    qWarning() << "[callback] error:" << (char *)data;
-    QMetaObject::invokeMethod(SkedPlayer::singleton(), "error", Qt::QueuedConnection, Q_ARG(int, SkedPlayer::ERROR_SRC_NOT_SUPPORTED));
-    break;
-
-  case eGOPLAYER_CBT_FINISHED:
-    qDebug() << "[callback] EOS";
-    QMetaObject::invokeMethod(SkedPlayer::singleton(), "onEnded", Qt::QueuedConnection);
-    break;
-
-  case eGOPLAYER_CBT_FRAME_CAPTURE:
-    break;
-  case eGOPLAYER_CBT_MAX:
-    break;
   default:
     break;
+  }
+}
+
+static enum aui_mp_speed rateToAuiMpSpeed(double rate) {
+  if (rate < -16) {
+    qDebug() << "skedplayer" << "FR" << 24;
+    return AUI_MP_SPEED_FASTREWIND_24;
+  } else if (rate < -8) {
+    qDebug() << "skedplayer" << "FR" << 16;
+    return AUI_MP_SPEED_FASTREWIND_16;
+  } else if (rate < -4) {
+    qDebug() << "skedplayer" << "FR" << 8;
+    return AUI_MP_SPEED_FASTREWIND_8;
+  } else if (rate < -2) {
+    qDebug() << "skedplayer" << "FR" << 4;
+    return AUI_MP_SPEED_FASTREWIND_4;
+  } else if (rate < 0) {
+    qDebug() << "skedplayer" << "FR" << 2;
+    return AUI_MP_SPEED_FASTREWIND_2;
+  } else if (rate == 0) {
+    return  AUI_MP_SPEED_0;
+  } else if (rate <= 1) {
+    return  AUI_MP_SPEED_1;
+  } else if (rate > 1) {
+    qDebug() << "skedplayer" << "FF" << 2;
+    return AUI_MP_SPEED_FASTFORWARD_2;
+  } else if (rate > 2) {
+    qDebug() << "skedplayer" << "FF" << 4;
+    return AUI_MP_SPEED_FASTFORWARD_4;
+  } else if (rate > 4) {
+    qDebug() << "skedplayer" << "FF" << 8;
+    return AUI_MP_SPEED_FASTFORWARD_8;
+  } else if (rate > 8) {
+    qDebug() << "skedplayer" << "FF" << 16;
+    return AUI_MP_SPEED_FASTFORWARD_16;
+  } else if (rate > 16) {
+    qDebug() << "skedplayer" << "FF" << 24;
+    return AUI_MP_SPEED_FASTFORWARD_24;
+  } else {
+    qWarning() << "skedplayer" << "should not reach here";
+    return  AUI_MP_SPEED_1;
   }
 }
