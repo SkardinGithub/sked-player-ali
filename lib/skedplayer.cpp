@@ -45,11 +45,13 @@ void SkedPlayer::setSrc(const QString &src)
   m_src = src;
   m_start_time = 0;
   m_playback_rate = 1;
+  m_fullscreen = true;
   if (m_state != STATE_STOP) {
     if (m_mp_handle) {
       aui_mp_close(NULL, &m_mp_handle);
       m_mp_handle = NULL;
     }
+    displayEnableVideo(false);
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
     emit stateChange(oldState, m_state);
@@ -69,7 +71,7 @@ void SkedPlayer::stop()
       m_mp_handle = NULL;
     }
     qDebug() << "\n\n\n\n\naui_mp_close took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
-    enableVideo(false);
+    displayEnableVideo(false);
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
     emit stateChange(oldState, m_state);
@@ -91,10 +93,12 @@ void SkedPlayer::load()
       m_mp_handle = NULL;
     }
     qDebug() << "\n\n\n\n\naui_mp_close took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
+    displayEnableVideo(false);
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
     emit stateChange(oldState, m_state);
   }
+  displayFillBlack();
   timer.restart();
   aui_attr_mp mp_attr;
   memset(&mp_attr, 0, sizeof(mp_attr));
@@ -288,7 +292,31 @@ void SkedPlayer::setFullScreen(bool full)
   emit displayRectChange(m_fullscreen, m_displayrect);
 }
 
-void SkedPlayer::enableVideo(bool on)
+void SkedPlayer::displayFillBlack()
+{
+  qDebug() << "skedplayer display fill black";
+  void *dis_hdl_hd = 0;
+  aui_attr_dis attr_dis_hd;
+  memset(&attr_dis_hd, 0, sizeof(attr_dis_hd));
+  attr_dis_hd.uc_dev_idx = AUI_DIS_HD;
+
+  if(0 != aui_find_dev_by_idx(AUI_MODULE_DIS, 0, &dis_hdl_hd)) {
+    if(0 != aui_dis_open(&attr_dis_hd, &dis_hdl_hd)) {
+      qWarning() << "skedplayer aui_dis_open fail";
+      return;
+    }
+  }
+
+  if(0 != aui_dis_fill_black_screen(dis_hdl_hd)) {
+    qWarning() << "skedplayer aui_dis_fill_black_screen fail";
+  }
+
+  if(0 != aui_dis_close(&attr_dis_hd, &dis_hdl_hd)) {
+    qWarning() << "skedplayer aui_dis_close fail";
+  }
+}
+
+void SkedPlayer::displayEnableVideo(bool on)
 {
   qDebug() << "skedplayer" << (on ? "enable" : "disable") << "display";
   void *dis_hdl_hd = 0;
@@ -303,18 +331,12 @@ void SkedPlayer::enableVideo(bool on)
     }
   }
 
-  // TODO:
-  aui_dis_fill_black_screen(dis_hdl_hd);
-
   if(0 != aui_dis_video_enable(dis_hdl_hd, on)) {
     qWarning() << "skedplayer aui_dis_video_enable fail";
-    aui_dis_close(&attr_dis_hd, &dis_hdl_hd);
-    return;
   }
 
   if(0 != aui_dis_close(&attr_dis_hd, &dis_hdl_hd)) {
     qWarning() << "skedplayer aui_dis_close fail";
-    return;
   }
 }
 
@@ -332,7 +354,7 @@ void SkedPlayer::onStart()
 #if 0 // TODO
     if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
 #endif
-    enableVideo(true);
+    displayEnableVideo(true);
     m_inited = true;
   }
   if (m_state == STATE_LOADED || m_state == STATE_PAUSED) {

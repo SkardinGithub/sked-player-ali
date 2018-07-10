@@ -74,7 +74,8 @@ private:
     bool getFullScreen() { return m_fullscreen; }
     void setFullScreen(bool full);
     bool seekable();
-    void enableVideo(bool on);
+    void displayFillBlack();
+    void displayEnableVideo(bool on);
 
 private:
     static SkedPlayer *m_instance;
