@@ -1,7 +1,12 @@
 #!/bin/bash
 
-export STAGING_DIR=$(readlink -e ${STAGING_DIR:-"${PWD}/../../host/usr/mipsel-buildroot-linux-gnu/sysroot/"})
-export TARGET_DIR=$(readlink -e ${TARGET_DIR:-"${PWD}/../../target/"})
+STAGING_DIR=$(readlink -e ${STAGING_DIR:-"${PWD}/../../host/usr/mipsel-buildroot-linux-gnu/sysroot/"})
+TARGET_DIR=$(readlink -e ${TARGET_DIR:-"${PWD}/../../target/"})
+QMAKE=$(readlink -e ${QMAKE:-"${PWD}/../../host/usr/bin/qmake"})
+
+CONFIG=""
+CONFIG="${CONFIG} example"
+CONFIG="${CONFIG} debug"
 
 usage() {
   echo "Usage: $(basename $0) <clean|qmake|make|install>"
@@ -21,7 +26,7 @@ case $1 in
     [ -f example/skedplayer_qml_plugin_import.cpp ] && rm example/skedplayer_qml_plugin_import.cpp;
     ;;
   qmake)
-    ../../host/usr/bin/qmake "CONFIG+=example debug"
+    ${QMAKE} "CONFIG+=${CONFIG}"
     ;;
   make)
     make

@@ -15,12 +15,10 @@ DESTDIR     = build
 SOURCES += example.cpp
 RESOURCES += qml.qrc
 
-STAGING_DIR = $$(STAGING_DIR)
-message(STAGING_DIR: ${{STAGING_DIR}})
-
-INCLUDEPATH += $${STAGING_DIR}/usr/include
 LIBS += -L../build -lskedplayer
-LIBS += -L$${STAGING_DIR}/usr/qml/QtQuick.2 -lqtquick2plugin -laui
+LIBS += -L$$[QT_SYSROOT]/usr/qml/QtQuick.2 -lqtquick2plugin
+LIBS += -L$$[QT_SYSROOT]/usr/qml/Qt/labs/folderlistmodel -lqmlfolderlistmodelplugin
+LIBS += -laui
 
 target.path = /opt/$${TARGET}/bin
 INSTALLS += target

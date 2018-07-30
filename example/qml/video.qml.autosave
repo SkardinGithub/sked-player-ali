@@ -1,0 +1,78 @@
+import QtQuick 2.0
+
+Rectangle {
+    id: root
+    color: "transparent"
+
+    property double itemOpacity: 0.7
+
+    Item {
+        id: snd_bar
+        width: parent.width
+        height: 55
+        anchors.top: parent.top
+        anchors.topMargin: 80
+        smooth: true
+        opacity: 0
+
+        property alias progressHeight: audio_progress.height
+
+        Image {
+            id: snd_bar_bg
+            anchors.fill: parent
+            source: "images/snd_bar_bg.png"
+            smooth: true
+        }
+
+        Item {
+            id: snd_bar_vol
+            width: parent.width - 118
+            height: 25
+            anchors.centerIn: parent
+            Image {
+                id: audio_full
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                smooth: true
+                width: 1000
+                source: "images/audio_bar/audio_full.png"
+
+                Image {
+                    id: audio_current
+                    anchors.left: parent.left
+                    smooth: true
+                    width: {
+                        if (Number(audio_volume.text))
+                            return Number(audio_volume.text) * 10
+                        else
+                            return 0;
+                    }
+
+                    height: parent.height
+                    source: "images/audio_bar/audio_current.png"
+                }
+            }
+
+            Image {
+                id: snd_icon
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: audio_full.right
+                anchors.leftMargin: 55
+                source: "images/snd_icon.png"
+            }
+
+            Text {
+                id: snd_vol_txt
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.right: parent.right
+                text: mplayer.mute ? "0" : mplayer.vol
+                font.pixelSize: 25
+                color: "white"
+            }
+        }
+
+        Behavior on opacity {
+            NumberAnimation { duration: 300 }
+        }
+    }
+}

@@ -20,6 +20,7 @@ SkedPlayer::SkedPlayer(QObject *parent) : QObject(parent)
   m_mp_handle = NULL;
   m_state = STATE_STOP;
   m_playback_rate = 1;
+  m_buffer_level = 0;
   m_fullscreen = true;
   m_displayrect = QRect(0, 0, 1280, 720);
   setenv("GST_REGISTRY", "/tmp/gst_registry.bin", 0);
@@ -45,6 +46,7 @@ void SkedPlayer::setSrc(const QString &src)
   m_src = src;
   m_start_time = 0;
   m_playback_rate = 1;
+  m_buffer_level = 0;
   m_fullscreen = true;
   if (m_state != STATE_STOP) {
     if (m_mp_handle) {
@@ -62,6 +64,7 @@ void SkedPlayer::stop()
 {
   qDebug() << "skedplayer stop";
   m_playback_rate = 1;
+  m_buffer_level = 0;
   m_fullscreen = true;
   if (m_state != STATE_STOP) {
     QElapsedTimer timer; // measure for bug#8006
@@ -83,6 +86,7 @@ void SkedPlayer::load()
   qDebug() << "skedplayer load" << m_src << "from position" << m_start_time;
   if (m_state == STATE_LOADED) return;
   if (m_src.isEmpty()) return;
+  m_buffer_level = 0;
   m_inited = false;
   m_duration = -1;
   QElapsedTimer timer; // measure for bug#8006
@@ -116,6 +120,7 @@ void SkedPlayer::load()
   enum STATE oldState = m_state;
   m_state = STATE_LOADED;
   emit stateChange(oldState, m_state);
+  emit buffering(m_buffer_level);
 }
 
 void SkedPlayer::play()
@@ -170,6 +175,8 @@ void SkedPlayer::setCurrentTime(double time)
   case STATE_PAUSED:
   case STATE_PLAY:
     aui_mp_seek(m_mp_handle, time * 1000);
+    //m_buffer_level = 0;
+    //emit buffering(m_buffer_level);
     break;
   case STATE_STOP:
     m_start_time = time;
@@ -217,7 +224,7 @@ void SkedPlayer::setVolume(double vol)
       return;
     }
   }
-  if (0 != aui_snd_vol_set(hdl_snd, vol * 100)) {
+  if (0 != aui_snd_vol_set(hdl_snd, vol * 100 + 0.5)) {
     qWarning() << "skedplayer aui_snd_vol_set fail";
     aui_snd_close(hdl_snd);
     return;
@@ -370,6 +377,10 @@ void SkedPlayer::onEnded()
   enum STATE oldState = m_state;
   m_state = STATE_ENDED;
   emit stateChange(oldState, m_state);
+  if (m_buffer_level != 100) {
+      m_buffer_level = 100;
+      emit buffering(m_buffer_level);
+  }
 }
 
 void SkedPlayer::onStart()
@@ -379,6 +390,10 @@ void SkedPlayer::onStart()
     if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
 #endif
     displayEnableVideo(true);
+    if (m_buffer_level != 100) {
+        m_buffer_level = 100;
+        emit buffering(m_buffer_level);
+    }
     m_inited = true;
   }
   if (m_state == STATE_LOADED || m_state == STATE_PAUSED) {
@@ -388,9 +403,8 @@ void SkedPlayer::onStart()
 
 void SkedPlayer::onBuffering(int percent)
 {
-  if (percent == 100 || m_state == STATE_PLAY) {
-    emit buffering(percent);
-  }
+    m_buffer_level = percent;
+    emit buffering(m_buffer_level);
 }
 
 static void _callback(aui_mp_message type, void *data, void *userData)

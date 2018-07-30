@@ -1,5 +1,34 @@
 <RCC>
     <qresource prefix="/">
         <file>qml/main.qml</file>
+        <file>qml/MainMenu.qml</file>
+        <file>qml/VfsBrowser.qml</file>
+        <file>qml/FileBrowser.qml</file>
+        <file>qml/ContentVideo.qml</file>
+        <file>qml/ContentAudio.qml</file>
+        <file>qml/Content.js</file>
+        <file>qml/Sound.qml</file>
+        <file>qml/TopBar.qml</file>
+        <file>images/background.png</file>
+        <file>images/select_bar.png</file>
+        <file>images/yellow_arrow.png</file>
+        <file>images/top_bar_bg.png</file>
+        <file>images/filebrowser/backarrow_icon.png</file>
+        <file>images/filebrowser/folder_icon.png</file>
+        <file>images/filebrowser/video_icon.png</file>
+        <file>images/filebrowser/audio_icon.png</file>
+        <file>images/snd/vol_icon.png</file>
+        <file>images/snd/mute_icon.png</file>
+        <file>images/video/pause_icon.png</file>
+        <file>images/video/play_icon.png</file>
+        <file>images/video/loading_icon.png</file>
+        <file>images/audio/pause_icon.png</file>
+        <file>images/audio/play_icon.png</file>
+        <file>images/audio/default_album_art.png</file>
+        <file>images/audio/current_playing_icon.png</file>
+        <file>images/home/movies.png</file>
+        <file>images/home/movies_selected.png</file>
+        <file>images/home/musics.png</file>
+        <file>images/home/musics_selected.png</file>
     </qresource>
 </RCC>

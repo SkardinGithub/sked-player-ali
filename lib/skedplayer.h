@@ -17,6 +17,7 @@ class SkedPlayer : public QObject
     Q_PROPERTY(double duration READ duration)
     Q_PROPERTY(QRect displayrect READ getDisplayRect WRITE setDisplayRect NOTIFY displayRectChange)
     Q_PROPERTY(bool fullscreen READ getFullScreen WRITE setFullScreen NOTIFY displayRectChange)
+    Q_PROPERTY(int bufferLevel READ getBufferLevel NOTIFY buffering)
 
 public:
     explicit SkedPlayer(QObject *parent = 0);
@@ -74,6 +75,7 @@ private:
     bool getFullScreen() { return m_fullscreen; }
     void setFullScreen(bool full);
     bool seekable();
+    int getBufferLevel() { return m_buffer_level; }
     void displayFillBlack();
     void displayEnableVideo(bool on);
 
@@ -88,5 +90,6 @@ private:
     double m_duration;
     bool m_inited;
     void *m_mp_handle;
+    int m_buffer_level;
 };
 #endif // SKEDPLAYER_H
