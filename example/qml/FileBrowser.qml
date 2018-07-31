@@ -11,6 +11,7 @@ Rectangle {
     height: 720
 
     property string folder: "/media"
+    property string rootFolder: ""
     property var currentIndex: [0]
     property string titleImageUri: ""
     property int video : 1
@@ -52,6 +53,8 @@ Rectangle {
     }
 
     function show() {
+        if (rootFolder === "")
+            rootFolder = folder
         loader.sourceComponent = fileBrowserComponent
         loader.item.parent = fileBrowser
         loader.item.anchors.fill = fileBrowser
@@ -78,7 +81,9 @@ Rectangle {
                 id: titleBar
                 anchors.top: parent.top
                 imageSource: titleImageUri
-                title: mainFolders.folder
+                title:{
+                    mainFolders.folder.toString().substring(rootFolder.length) || "/"
+                }
             }
 
             Item {
