@@ -23,11 +23,9 @@ SkedPlayer::SkedPlayer(QObject *parent) : QObject(parent)
   m_buffer_level = 0;
   m_fullscreen = true;
   m_displayrect = QRect(0, 0, 1280, 720);
-  setenv("GST_REGISTRY", "/tmp/gst_registry.bin", 0);
-  if (!getenv("OMX_BELLAGIO_REGISTRY")) {
-    setenv("OMX_BELLAGIO_REGISTRY", "/tmp/omx_bellagio_registry", 0);
-    QProcess::execute("omxregister-bellagio", QStringList() << "/usr/lib/bellagio/");
-  }
+  setenv("GST_REGISTRY", "/tmp/gst_registry.bin", 1);
+  setenv("OMX_BELLAGIO_REGISTRY", "/tmp/omx_bellagio_registry", 1);
+  QProcess::execute("omxregister-bellagio", QStringList() << "/usr/lib/bellagio/");
   SkedPlayer::m_instance = this;
 }
 
