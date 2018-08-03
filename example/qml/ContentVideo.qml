@@ -184,7 +184,10 @@ Rectangle {
                     height: 40
                     width: parent.width - 100
                     color: "yellow"
-                    text: playlist[currentPlayIndex]["title"];
+                    text: {
+                      if (currentPlayIndex >= 0) return playlist[currentPlayIndex]["title"];
+                      else return ""
+                    }
                     font.pointSize: 26
                     //font.bold: true
                     verticalAlignment: Text.AlignVCenter
