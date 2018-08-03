@@ -3,6 +3,7 @@ TARGET = skedplayer
 CONFIG += staticlib
 CONFIG += c++11
 #CONFIG += debug
+QT -= gui
 
 # Build directory
 OBJECTS_DIR = ../build
