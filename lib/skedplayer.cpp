@@ -299,10 +299,8 @@ void SkedPlayer::setDisplayRect(const QRect & rect)
   qDebug() << "skedplayer set display rect" << rect;
   m_displayrect = rect;
   // TODO
-#if 0
   if (! m_fullscreen && m_state != STATE_STOP)
-    goplayer_set_display_rect(rect.left(), rect.top(), rect.width(), rect.height());
-#endif
+    aui_mp_set_display_rect(m_mp_handle, rect.left(), rect.top(), rect.width(), rect.height());
   emit displayRectChange(m_fullscreen, m_displayrect);
 }
 
@@ -312,12 +310,8 @@ void SkedPlayer::setFullScreen(bool full)
   m_fullscreen = full;
   QRect rect = (m_fullscreen ? QRect(0, 0, 1280, 720) : m_displayrect);
   // TODO
-#if 0
   if (m_state != STATE_STOP)
-    goplayer_set_display_rect(rect.left(), rect.top(), rect.width(), rect.height());
-#else
-  Q_UNUSED(rect);
-#endif
+    aui_mp_set_display_rect(m_mp_handle, rect.left(), rect.top(), rect.width(), rect.height());
   emit displayRectChange(m_fullscreen, m_displayrect);
 }
 
@@ -376,21 +370,21 @@ void SkedPlayer::onEnded()
   m_state = STATE_ENDED;
   emit stateChange(oldState, m_state);
   if (m_buffer_level != 100) {
-      m_buffer_level = 100;
-      emit buffering(m_buffer_level);
+    m_buffer_level = 100;
+    emit buffering(m_buffer_level);
   }
 }
 
 void SkedPlayer::onStart()
 {
   if (!m_inited) {
-#if 0 // TODO
-    if (! m_fullscreen) goplayer_set_display_rect(m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
-#endif
+    if (! m_fullscreen) {
+      aui_mp_set_display_rect(m_mp_handle, m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
+    }
     displayEnableVideo(true);
     if (m_buffer_level != 100) {
-        m_buffer_level = 100;
-        emit buffering(m_buffer_level);
+      m_buffer_level = 100;
+      emit buffering(m_buffer_level);
     }
     m_inited = true;
   }
@@ -401,8 +395,8 @@ void SkedPlayer::onStart()
 
 void SkedPlayer::onBuffering(int percent)
 {
-    m_buffer_level = percent;
-    emit buffering(m_buffer_level);
+  m_buffer_level = percent;
+  emit buffering(m_buffer_level);
 }
 
 static void _callback(aui_mp_message type, void *data, void *userData)
