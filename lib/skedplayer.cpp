@@ -465,26 +465,25 @@ static enum aui_mp_speed rateToAuiMpSpeed(double rate) {
     qDebug() << "skedplayer" << "FR" << 2;
     return AUI_MP_SPEED_FASTREWIND_2;
   } else if (rate == 0) {
+    qDebug() << "skedplayer speed 0";
     return  AUI_MP_SPEED_0;
-  } else if (rate <= 1) {
+  } else if (rate < 2) {
+    qDebug() << "skedplayer speed 1";
     return  AUI_MP_SPEED_1;
-  } else if (rate > 1) {
+  } else if (rate < 4) {
     qDebug() << "skedplayer" << "FF" << 2;
     return AUI_MP_SPEED_FASTFORWARD_2;
-  } else if (rate > 2) {
+  } else if (rate < 8) {
     qDebug() << "skedplayer" << "FF" << 4;
     return AUI_MP_SPEED_FASTFORWARD_4;
-  } else if (rate > 4) {
+  } else if (rate < 16) {
     qDebug() << "skedplayer" << "FF" << 8;
     return AUI_MP_SPEED_FASTFORWARD_8;
-  } else if (rate > 8) {
+  } else if (rate < 24) {
     qDebug() << "skedplayer" << "FF" << 16;
     return AUI_MP_SPEED_FASTFORWARD_16;
-  } else if (rate > 16) {
+  } else {
     qDebug() << "skedplayer" << "FF" << 24;
     return AUI_MP_SPEED_FASTFORWARD_24;
-  } else {
-    qWarning() << "skedplayer" << "should not reach here";
-    return  AUI_MP_SPEED_1;
   }
 }
