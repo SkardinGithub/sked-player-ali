@@ -6,6 +6,7 @@ QMAKE=$(readlink -e ${QMAKE:-"${PWD}/../../host/usr/bin/qmake"})
 
 CONFIG=""
 CONFIG="${CONFIG} example"
+CONFIG="${CONFIG} server"
 CONFIG="${CONFIG} debug"
 
 usage() {
@@ -24,6 +25,7 @@ case $1 in
     [ -d example/build ] && rm -rf example/build;
     [ -f example/skedplayer_plugin_import.cpp ] && rm example/skedplayer_plugin_import.cpp;
     [ -f example/skedplayer_qml_plugin_import.cpp ] && rm example/skedplayer_qml_plugin_import.cpp;
+    [ -d server/build ] && rm -rf server/build;
     ;;
   qmake)
     ${QMAKE} "CONFIG+=${CONFIG}"

@@ -15,7 +15,7 @@ DESTDIR     = ../build
 SOURCES += skedplayer.cpp
 HEADERS += skedplayer.h
 
-LIBS += -L$$[QT_SYSROOT]/usr/lib -laui
+LIBS += -laui
 
 headers.files = skedplayer.h
 headers.path  = /usr/include

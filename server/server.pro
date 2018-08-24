@@ -1,8 +1,8 @@
 TEMPLATE = app
-TARGET = skedplayer-example
-QT += quick widgets
+QT += core dbus
+TARGET = skedplayer-server
 CONFIG += c++11
-CONFIG += debug
+QT -= gui
 
 # Build directory
 OBJECTS_DIR = build
@@ -11,11 +11,13 @@ RCC_DIR     = build
 UI_DIR      = build
 DESTDIR     = build
 
-SOURCES += example.cpp
-RESOURCES += qml.qrc
+SOURCES += main.cpp
+HEADERS += skedplayer-server.h
 
 LIBS += -L../build -lskedplayer
 LIBS += -laui
 
 target.path = /opt/skedplayer/bin
-INSTALLS += target
+dbus.files  = com.sked.service.player.conf
+dbus.path   = /etc/dbus-1/system.d
+INSTALLS   += dbus target

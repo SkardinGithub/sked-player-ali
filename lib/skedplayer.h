@@ -12,7 +12,7 @@ class SkedPlayer : public QObject
     Q_PROPERTY(bool seekable READ seekable)
     Q_PROPERTY(double currentTime READ getCurrentTime WRITE setCurrentTime)
     Q_PROPERTY(double vol READ getVolume WRITE setVolume NOTIFY volumeChange)
-    Q_PROPERTY(double mute READ muted WRITE mute NOTIFY volumeChange)
+    Q_PROPERTY(bool mute READ muted WRITE mute NOTIFY volumeChange)
     Q_PROPERTY(double rate READ getPlayBackRate WRITE setPlayBackRate NOTIFY rateChange)
     Q_PROPERTY(double duration READ duration)
     Q_PROPERTY(QRect displayrect READ getDisplayRect WRITE setDisplayRect NOTIFY displayRectChange)
