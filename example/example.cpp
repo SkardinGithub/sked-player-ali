@@ -4,6 +4,11 @@
 #include "../lib/skedplayer.h"
 #include <QtCore/QDebug>
 
+#ifdef QT_STATIC
+Q_IMPORT_PLUGIN(QtQuick2Plugin)
+Q_IMPORT_PLUGIN(QmlFolderListModelPlugin)
+#endif
+
 static QObject *skedplayer_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
   Q_UNUSED(engine)

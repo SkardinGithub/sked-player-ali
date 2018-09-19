@@ -16,6 +16,12 @@ RESOURCES += qml.qrc
 
 LIBS += -L../build -lskedplayer
 LIBS += -laui
+static {
+  QTPLUGIN += qdirectfb qevdevkeyboardplugin
+  LIBS += -L$$[QT_SYSROOT]/usr/qml/QtQuick.2 -lqtquick2plugin
+  LIBS += -L$$[QT_SYSROOT]/usr/qml/Qt/labs/folderlistmodel -lqmlfolderlistmodelplugin
+  DEFINES += QT_STATIC
+}
 
-target.path = /opt/skedplayer/bin
+target.path = /opt/sked/player/bin
 INSTALLS += target

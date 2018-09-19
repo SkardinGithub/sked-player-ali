@@ -6,7 +6,7 @@ QMAKE=$(readlink -e ${QMAKE:-"${PWD}/../../host/usr/bin/qmake"})
 
 CONFIG=""
 CONFIG="${CONFIG} example"
-CONFIG="${CONFIG} server"
+#CONFIG="${CONFIG} server"
 CONFIG="${CONFIG} debug"
 
 usage() {

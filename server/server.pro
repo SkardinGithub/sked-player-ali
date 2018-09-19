@@ -17,7 +17,7 @@ HEADERS += skedplayer-server.h
 LIBS += -L../build -lskedplayer
 LIBS += -laui
 
-target.path = /opt/skedplayer/bin
+target.path = /opt/sked/player/bin
 dbus.files  = com.sked.service.player.conf
 dbus.path   = /etc/dbus-1/system.d
 INSTALLS   += dbus target
