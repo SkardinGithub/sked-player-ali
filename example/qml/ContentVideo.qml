@@ -385,6 +385,10 @@ Rectangle {
             Player.displayrect = Qt.rect(320, 180, 640, 360);
             Player.fullscreen = false;
             break;
+        case Qt.Key_6:
+            Player.displayrect = Qt.rect(650, 220, 320, 204);
+            Player.fullscreen = false;
+            break;
         default:
             return;
         }

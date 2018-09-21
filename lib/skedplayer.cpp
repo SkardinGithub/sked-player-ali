@@ -332,14 +332,27 @@ void SkedPlayer::displaySetRect(const QRect & rect)
   }
 
   aui_dis_zoom_rect src_rect = {0, 0, 720, 2880 };
-  aui_dis_zoom_rect dst_rect = {0, 0, 720/2, 2880/2 };
+  aui_dis_zoom_rect dst_rect;
   dst_rect.ui_startX = rect.x() * 720 / 1280;
   dst_rect.ui_startY = rect.y() * 2880 / 720;
   dst_rect.ui_width = rect.width() * 720 / 1280;
   dst_rect.ui_height = rect.height() * 2880 / 720;
+  enum aui_view_mode mode = (dst_rect.ui_startX  == 0
+                        &&dst_rect.ui_startY == 0
+                        && dst_rect.ui_width == 720
+                        && dst_rect.ui_height == 2880)
+          ? AUI_VIEW_MODE_FULL : AUI_VIEW_MODE_PREVIEW;
+  if (0 != aui_dis_mode_set(dis_hdl_hd, mode, &src_rect, &dst_rect)) {
+    qWarning() << "skedplayer aui_dis_mode_set fail";
+  }
   if (0 != aui_dis_zoom(dis_hdl_hd, &src_rect, &dst_rect)) {
+    qWarning() << "skedplayer aui_dis_zoom fail";
+  }
+#if 0
+  if (0 != aui_dis_video_display_rect_set(dis_hdl_hd, AUI_DIS_LAYER_VIDEO, &src_rect, &dst_rect)) {
     qWarning() << "skedplayer aui_dis_video_display_rect_set fail";
   }
+#endif
 
   if(0 != aui_dis_close(&attr_dis_hd, &dis_hdl_hd)) {
     qWarning() << "skedplayer aui_dis_close fail";
