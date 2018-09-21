@@ -55,6 +55,7 @@ signals:
 private slots:
     void onEnded();
     void onStart();
+    void initDisplay();
     void onBuffering(int percent);
 
 private:
@@ -78,6 +79,7 @@ private:
     int getBufferLevel() { return m_buffer_level; }
     void displayFillBlack();
     void displayEnableVideo(bool on);
+    void displaySetRect(const QRect & rect);
 
 private:
     static SkedPlayer *m_instance;
