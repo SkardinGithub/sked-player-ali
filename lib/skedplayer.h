@@ -26,7 +26,7 @@ public:
     Q_INVOKABLE void load();
     Q_INVOKABLE void play();
     Q_INVOKABLE void pause();
-    Q_INVOKABLE void stop();
+    Q_INVOKABLE bool stop();
 
     enum STATE {
       STATE_STOP,
