@@ -298,9 +298,9 @@ void SkedPlayer::setDisplayRect(const QRect & rect)
 {
   qDebug() << "skedplayer set display rect" << rect;
   m_displayrect = rect;
-  if (! m_fullscreen && m_state != STATE_STOP) {
-    displaySetRect(rect);
-  }
+  // TODO
+  if (! m_fullscreen && m_state != STATE_STOP)
+    aui_mp_set_display_rect(m_mp_handle, rect.left(), rect.top(), rect.width(), rect.height());
   emit displayRectChange(m_fullscreen, m_displayrect);
 }
 
@@ -309,41 +309,10 @@ void SkedPlayer::setFullScreen(bool full)
   qDebug() << "skedplayer" << "fullscreen" << full;
   m_fullscreen = full;
   QRect rect = (m_fullscreen ? QRect(0, 0, 1280, 720) : m_displayrect);
-  if (m_state != STATE_STOP) {
-    displaySetRect(rect);
-  }
+  // TODO
+  if (m_state != STATE_STOP)
+    aui_mp_set_display_rect(m_mp_handle, rect.left(), rect.top(), rect.width(), rect.height());
   emit displayRectChange(m_fullscreen, m_displayrect);
-}
-
-void SkedPlayer::displaySetRect(const QRect & rect)
-{
-  qDebug() << "skedplayer display set rect" << rect;
-
-  void *dis_hdl_hd = 0;
-  aui_attr_dis attr_dis_hd;
-  memset(&attr_dis_hd, 0, sizeof(attr_dis_hd));
-  attr_dis_hd.uc_dev_idx = AUI_DIS_HD;
-
-  if(0 != aui_find_dev_by_idx(AUI_MODULE_DIS, 0, &dis_hdl_hd)) {
-    if(0 != aui_dis_open(&attr_dis_hd, &dis_hdl_hd)) {
-      qWarning() << "skedplayer aui_dis_open fail";
-      return;
-    }
-  }
-
-  aui_dis_zoom_rect src_rect = {0, 0, 720, 2880 };
-  aui_dis_zoom_rect dst_rect = {0, 0, 720/2, 2880/2 };
-  dst_rect.ui_startX = rect.x() * 720 / 1280;
-  dst_rect.ui_startY = rect.y() * 2880 / 720;
-  dst_rect.ui_width = rect.width() * 720 / 1280;
-  dst_rect.ui_height = rect.height() * 2880 / 720;
-  if (0 != aui_dis_zoom(dis_hdl_hd, &src_rect, &dst_rect)) {
-    qWarning() << "skedplayer aui_dis_video_display_rect_set fail";
-  }
-
-  if(0 != aui_dis_close(&attr_dis_hd, &dis_hdl_hd)) {
-    qWarning() << "skedplayer aui_dis_close fail";
-  }
 }
 
 void SkedPlayer::displayFillBlack()
@@ -406,28 +375,13 @@ void SkedPlayer::onEnded()
   }
 }
 
-void SkedPlayer::initDisplay()
-{
-  if (m_state == STATE_PLAY || m_state == STATE_PAUSED ) {
-    displayEnableVideo(true);
-    displaySetRect(m_fullscreen ? QRect(0, 0, 1280, 720) : m_displayrect);
-  }
-}
-
 void SkedPlayer::onStart()
 {
-  qDebug() << "skedplayer onStart";
   if (!m_inited) {
-    initDisplay();
-
-    // workaround
-    QTimer::singleShot(100, this, SLOT(initDisplay()));
-    QTimer::singleShot(200, this, SLOT(initDisplay()));
-    QTimer::singleShot(400, this, SLOT(initDisplay()));
-    QTimer::singleShot(600, this, SLOT(initDisplay()));
-    QTimer::singleShot(1200, this, SLOT(initDisplay()));
-    QTimer::singleShot(3000, this, SLOT(initDisplay()));
-
+    if (! m_fullscreen) {
+      aui_mp_set_display_rect(m_mp_handle, m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
+    }
+    displayEnableVideo(true);
     if (m_buffer_level != 100) {
       m_buffer_level = 100;
       emit buffering(m_buffer_level);
