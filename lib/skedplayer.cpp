@@ -5,6 +5,7 @@ extern "C" {
 #include <aui_mp.h>
 #include <aui_snd.h>
 #include <aui_dis.h>
+#include <aui_decv.h>
 }
 
 SkedPlayer * SkedPlayer::m_instance = NULL;
@@ -69,6 +70,14 @@ bool SkedPlayer::stop()
     QElapsedTimer timer; // measure for bug#8006
     timer.start();
     if (m_mp_handle) {
+      /* TODO: Investigate resource management and correct switch from live view to player and back */
+      /* walk around to recover live view after exit from player */
+      aui_hdl decv_hdl = NULL;
+      if (AUI_RTN_SUCCESS == aui_find_dev_by_idx(AUI_MODULE_DECV, 0, &decv_hdl))
+      {
+        aui_decv_start(decv_hdl);
+        aui_decv_stop(decv_hdl);
+      }
       aui_mp_close(NULL, &m_mp_handle);
       m_mp_handle = NULL;
     }
