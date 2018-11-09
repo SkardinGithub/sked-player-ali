@@ -69,7 +69,7 @@ void SkedPlayer::stop()
 
 void SkedPlayer::load()
 {
-  qDebug() << "skedplayer load" << m_src << "from position" << m_start_time;
+  qDebug() << "+skedplayer load" << m_src << "from position" << m_start_time;
   if (m_state == STATE_LOADED) return;
   if (m_src.isEmpty()) return;
   m_buffer_level = 0;
@@ -108,7 +108,7 @@ void SkedPlayer::load()
 
 void SkedPlayer::play()
 {
-  qDebug() << "skedplayer play";
+  qDebug() << "+skedplayer play";
   if (m_state == STATE_PLAY) return;
   if (m_src.isEmpty()) return;
   if (m_state == STATE_STOP || m_state == STATE_ENDED) load();
@@ -242,10 +242,25 @@ void SkedPlayer::setFullScreen(bool full)
 
 void SkedPlayer::onEnded()
 {
-  qDebug() << "skedplayer onEnded";
+  if (m_mp_handle)
+  {
+      /* TODO: Investigate resource management and correct switch from live view to player and back */
+      /* walk around to recover live view after exit from player */
+      aui_hdl decv_hdl = NULL;
+      if (AUI_RTN_SUCCESS == aui_find_dev_by_idx(AUI_MODULE_DECV, 0, &decv_hdl))
+      {
+        aui_decv_start(decv_hdl);
+        aui_decv_stop(decv_hdl);
+        qDebug() << "start/stop";
+      }
+      aui_mp_close(NULL, &m_mp_handle);
+      m_mp_handle = NULL;
+  }
+  displayFillBlack();
   enum STATE oldState = m_state;
   m_state = STATE_ENDED;
   emit stateChange(oldState, m_state);
+  qDebug() << "SHKEDplayer onEnded";
   if (m_buffer_level != 100) {
     m_buffer_level = 100;
     emit buffering(m_buffer_level);
