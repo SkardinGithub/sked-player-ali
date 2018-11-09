@@ -5,6 +5,7 @@ extern "C" {
 #include <aui_mp.h>
 #include <aui_snd.h>
 #include <aui_dis.h>
+#include <aui_decv.h>
 }
 
 SkedPlayer * SkedPlayer::m_instance = NULL;
@@ -365,10 +366,25 @@ void SkedPlayer::displayEnableVideo(bool on)
 
 void SkedPlayer::onEnded()
 {
-  qDebug() << "skedplayer onEnded";
+  if (m_mp_handle)
+  {
+      /* TODO: Investigate resource management and correct switch from live view to player and back */
+      /* walk around to recover live view after exit from player */
+      aui_hdl decv_hdl = NULL;
+      if (AUI_RTN_SUCCESS == aui_find_dev_by_idx(AUI_MODULE_DECV, 0, &decv_hdl))
+      {
+        aui_decv_start(decv_hdl);
+        aui_decv_stop(decv_hdl);
+        qDebug() << "start/stop";
+      }
+      aui_mp_close(NULL, &m_mp_handle);
+      m_mp_handle = NULL;
+  }
+  displayFillBlack();
   enum STATE oldState = m_state;
   m_state = STATE_ENDED;
   emit stateChange(oldState, m_state);
+  qDebug() << "SKEDplayer onEnded";
   if (m_buffer_level != 100) {
     m_buffer_level = 100;
     emit buffering(m_buffer_level);
