@@ -256,7 +256,7 @@ void SkedPlayer::onEnded()
       aui_mp_close(NULL, &m_mp_handle);
       m_mp_handle = NULL;
   }
-  displayFillBlack();
+//  displayFillBlack();
   enum STATE oldState = m_state;
   m_state = STATE_ENDED;
   emit stateChange(oldState, m_state);
