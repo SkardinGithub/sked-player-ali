@@ -51,7 +51,7 @@ public slots:
     Q_NOREPLY void load() { m_player->load(); }
     Q_NOREPLY void play() { m_player->play(); }
     Q_NOREPLY void pause() { m_player->pause(); }
-    Q_NOREPLY void stop() { m_player->stop(); }
+    Q_NOREPLY bool stop() { return m_player->stop(); }
 
 signals:
     void stateChange(int oldState, int newState);
