@@ -52,7 +52,7 @@ void SkedPlayer::setSrc(const QString &src)
       aui_mp_close(NULL, &m_mp_handle);
       m_mp_handle = NULL;
     }
-//  displayEnableVideo(false);
+    //displayEnableVideo(false);
     displayFillBlack();
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
@@ -74,7 +74,7 @@ bool SkedPlayer::stop()
       m_mp_handle = NULL;
     }
     qDebug() << "\n\n\n\n\naui_mp_close took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
-//  displayEnableVideo(false);
+    //displayEnableVideo(false);
     displayFillBlack();
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
@@ -100,7 +100,7 @@ void SkedPlayer::load()
       m_mp_handle = NULL;
     }
     qDebug() << "\n\n\n\n\naui_mp_close took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
-//  displayEnableVideo(false);
+    //displayEnableVideo(false);
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
     emit stateChange(oldState, m_state);
@@ -225,16 +225,18 @@ void SkedPlayer::setVolume(double vol)
     if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
       qWarning() << "skedplayer aui_snd_open fail";
       return;
+    } else {
+      qDebug() << "skedplayer aui_snd_open OK";
     }
   }
   if (0 != aui_snd_vol_set(hdl_snd, vol * 100 + 0.5)) {
     qWarning() << "skedplayer aui_snd_vol_set fail";
-  //  aui_snd_close(hdl_snd);
+    //aui_snd_close(hdl_snd);
     return;
   }
   unsigned char mute;
   aui_snd_mute_get(hdl_snd, &mute);
-  //  aui_snd_close(hdl_snd);
+  //aui_snd_close(hdl_snd);
   emit volumeChange(mute, vol);
 }
 
@@ -247,13 +249,15 @@ double SkedPlayer::getVolume()
     if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
       qWarning() << "skedplayer aui_snd_open fail";
       return 0;
+    } else {
+      qDebug() << "skedplayer aui_snd_open OK";
     }
   }
   unsigned char vol = 0;
   if (0 != aui_snd_vol_get(hdl_snd, &vol)) {
     qWarning() << "skedplayer aui_snd_vol_get fail";
   }
-  //  aui_snd_close(hdl_snd);
+  //aui_snd_close(hdl_snd);
   return vol / 100.0;
 }
 
@@ -267,16 +271,18 @@ void SkedPlayer::mute(bool mute)
     if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
       qWarning() << "skedplayer aui_snd_open fail";
       return;
+    } else {
+      qDebug() << "skedplayer aui_snd_open OK";
     }
   }
   if (0 != aui_snd_mute_set(hdl_snd, mute)) {
     qWarning() << "skedplayer aui_snd_mute_set fail";
-    //  aui_snd_close(hdl_snd);
+    //aui_snd_close(hdl_snd);
     return;
   }
   unsigned char vol;
   aui_snd_vol_get(hdl_snd, &vol);
-  //  aui_snd_close(hdl_snd);
+  //aui_snd_close(hdl_snd);
   emit volumeChange(mute, vol/100.0);
 }
 
@@ -289,13 +295,15 @@ bool SkedPlayer::muted()
     if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
       qWarning() << "skedplayer aui_snd_open fail";
       return true;
+    } else {
+      qDebug() << "skedplayer aui_snd_open OK";
     }
   }
   unsigned char mute = 1;
   if (0 != aui_snd_mute_get(hdl_snd, &mute)) {
     qWarning() << "skedplayer aui_snd_mute_get fail";
   }
-  //  aui_snd_close(hdl_snd);
+  //aui_snd_close(hdl_snd);
   return mute;
 }
 
@@ -332,6 +340,8 @@ void SkedPlayer::displayFillBlack()
     if(0 != aui_dis_open(&attr_dis_hd, &dis_hdl_hd)) {
       qWarning() << "skedplayer aui_dis_open fail";
       return;
+    } else {
+      qDebug() << "skedplayer aui_dis_open OK";
     }
   }
 
@@ -358,6 +368,8 @@ void SkedPlayer::displayEnableVideo(bool on)
     if(0 != aui_dis_open(&attr_dis_hd, &dis_hdl_hd)) {
       qWarning() << "skedplayer aui_dis_open fail";
       return;
+    } else {
+      qDebug() << "skedplayer aui_dis_open OK";
     }
   }
 
