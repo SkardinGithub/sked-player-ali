@@ -12,7 +12,7 @@ Item {
 
     FileBrowser {
         id: fileBrowser
-        folder: "file:///mnt/usb"
+        folder: "file:///media"
         Component.onCompleted: open.connect(root.openContent)
         titleImageUri: {
             if (filter === root.video) return "../images/home/movies.png";
