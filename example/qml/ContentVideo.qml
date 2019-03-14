@@ -362,6 +362,33 @@ Rectangle {
         case Qt.Key_ChannelDown:
             playPrev();
             break;
+        case Qt.Key_0:
+            Player.fullscreen = true;
+            break;
+        case Qt.Key_1:
+            Player.displayrect = Qt.rect(0, 0, 640, 360);
+            if (Player.fullscreen) Player.fullscreen = false;
+            break;
+        case Qt.Key_2:
+            Player.displayrect = Qt.rect(640, 0, 640, 360);
+            if (Player.fullscreen) Player.fullscreen = false;
+            break;
+        case Qt.Key_3:
+            Player.displayrect = Qt.rect(0, 360, 640, 360);
+            if (Player.fullscreen) Player.fullscreen = false;
+            break;
+        case Qt.Key_4:
+            Player.displayrect = Qt.rect(640, 360, 640, 360);
+            if (Player.fullscreen) Player.fullscreen = false;
+            break;
+        case Qt.Key_5:
+            Player.displayrect = Qt.rect(320, 180, 640, 360);
+            if (Player.fullscreen) Player.fullscreen = false;
+            break;
+        case Qt.Key_6:
+            Player.displayrect = Qt.rect(650, 220, 320, 204);
+            if (Player.fullscreen) Player.fullscreen = false;
+            break;
         default:
             return;
         }
