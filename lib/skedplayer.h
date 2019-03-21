@@ -27,6 +27,7 @@ public:
     Q_INVOKABLE void play();
     Q_INVOKABLE void pause();
     Q_INVOKABLE bool stop();
+    Q_INVOKABLE static double getLastStopTime(const QString &src);
 
     enum STATE {
       STATE_STOP,
@@ -78,6 +79,8 @@ private:
     int getBufferLevel() { return m_buffer_level; }
     void displayFillBlack();
     void displayEnableVideo(bool on);
+    void saveStopTime();
+    void clearStopTime();
 
 private:
     static SkedPlayer *m_instance;

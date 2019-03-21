@@ -67,6 +67,7 @@ bool SkedPlayer::stop()
   m_buffer_level = 0;
   m_fullscreen = true;
   if (m_state != STATE_STOP) {
+    saveStopTime();
     QElapsedTimer timer; // measure for bug#8006
     timer.start();
     if (m_mp_handle) {
@@ -395,6 +396,7 @@ void SkedPlayer::displayEnableVideo(bool on)
 void SkedPlayer::onEnded()
 {
   qDebug() << "skedplayer onEnded";
+  clearStopTime();
   enum STATE oldState = m_state;
   m_state = STATE_ENDED;
   emit stateChange(oldState, m_state);
@@ -515,4 +517,77 @@ static enum aui_mp_speed rateToAuiMpSpeed(double rate) {
     qDebug() << "skedplayer" << "FF" << 24;
     return AUI_MP_SPEED_FASTFORWARD_24;
   }
+}
+
+static QString getBookMarkFileName(const QString &src)
+{
+  if (!src.startsWith("file://")) return QString();
+  return QFileInfo(src.mid(7)).absoluteFilePath() + ".skbm";
+}
+
+static QJsonObject getBookMarkJson(const QString &path)
+{
+  QJsonDocument jd;
+  QFile file(path);
+  if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    jd = QJsonDocument::fromJson(file.readAll());
+    file.close();
+  }
+  return jd.object();
+}
+
+static void saveStopTimeToBookMarkFile(const QString &path, double time)
+{
+  QJsonObject o = getBookMarkJson(path);
+  QFile file(path);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+    qWarning() << "skedplayer can not open" << path;
+    return;
+  }
+  o["last_stop_time"] = time;
+  file.write(QJsonDocument(o).toJson());
+  file.close();
+}
+
+static double getStopTimeFromBookMarkFile(const QString &path)
+{
+  QJsonObject o = getBookMarkJson(path);
+  if (o.contains("last_stop_time")) {
+    return o["last_stop_time"].toDouble();
+  }
+  return 0;
+}
+
+void SkedPlayer::clearStopTime()
+{
+  QString path = getBookMarkFileName(m_src);
+  if (path.isEmpty()) return;
+  qDebug() << "skedplayer clear stop time for" << m_src;
+  saveStopTimeToBookMarkFile(path, 0);
+}
+
+void SkedPlayer::saveStopTime()
+{
+  if (m_state != STATE_PAUSED && m_state != STATE_PLAY) return;
+
+  QString path = getBookMarkFileName(m_src);
+  if (path.isEmpty()) return;
+
+  double current_time = getCurrentTime();
+  double duration = this->duration();
+  if (current_time + 5 > duration) {
+    qDebug() << "skedplayer clearing stop time @" << current_time << "/" << duration;
+    clearStopTime();
+    return;
+  }
+
+  qDebug() << "skedplayer saving stop time @" << current_time << "/" << duration;
+  saveStopTimeToBookMarkFile(path, current_time);
+}
+
+double SkedPlayer::getLastStopTime(const QString &src)
+{
+  QString path = getBookMarkFileName(src);
+  if (path.isEmpty()) return 0;
+  return getStopTimeFromBookMarkFile(path);
 }

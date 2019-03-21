@@ -20,6 +20,7 @@ Rectangle {
     function play(index) {
         currentPlayIndex = index
         Player.src = playlist[currentPlayIndex]["uri"];
+        console.log("last stop time: " + Player.getLastStopTime(Player.src));
         Player.load();
         Player.play();
         control.show();
