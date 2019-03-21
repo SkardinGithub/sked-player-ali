@@ -14,7 +14,8 @@ DESTDIR     = build
 SOURCES += example.cpp
 RESOURCES += qml.qrc
 
-LIBS += -L../build -lskedplayer
+PRE_TARGETDEPS += ../build/libskedplayer.a
+LIBS += ../build/libskedplayer.a
 LIBS += -laui
 static {
   QTPLUGIN += qdirectfb qevdevkeyboardplugin
