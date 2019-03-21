@@ -1,6 +1,7 @@
 
 var videoExt = [
             "mp4",
+            "mov",
             "avi",
             "mkv",
             "ts",
