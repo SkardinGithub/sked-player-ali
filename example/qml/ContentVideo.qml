@@ -419,6 +419,10 @@ Rectangle {
                 break;
             }
         }
+        onError: {
+            console.debug('[video player] error', type);
+            Player.stop();
+        }
     }
 
     Component.onCompleted: {
