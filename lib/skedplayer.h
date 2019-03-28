@@ -42,6 +42,7 @@ public:
       ERROR_NETWORK = 1,
       ERROR_DECODE,
       ERROR_SRC_NOT_SUPPORTED,
+      ERROR_SYSTEM,
     };
     Q_ENUM(ERROR)
 

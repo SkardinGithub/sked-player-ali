@@ -409,6 +409,27 @@ void SkedPlayer::onEnded()
 void SkedPlayer::onStart()
 {
   if (!m_inited) {
+    aui_mp_stream_info *stream_info;
+    if (AUI_RTN_SUCCESS == aui_mp_get_cur_stream_info(m_mp_handle, AUI_MP_STREAM_INFO_TYPE_AUDIO, &stream_info)) {
+      for (unsigned int i = 0; i < stream_info->count; i++) {
+        aui_mp_audio_track_info *track_info = &stream_info->stream_info.audio_track_info[i];
+        qDebug() << "skedplayer audio" << track_info->track_index << QString::fromLatin1(track_info->lang_code, 5);
+      }
+      aui_mp_free_stream_info(m_mp_handle, stream_info);
+    } else {
+      qWarning() << "skedplayer can not get audio info";
+    }
+    if (AUI_RTN_SUCCESS == aui_mp_get_cur_stream_info(m_mp_handle, AUI_MP_STREAM_INFO_TYPE_VIDEO, &stream_info)) {
+      for (unsigned int i = 0; i < stream_info->count; i++) {
+        aui_mp_video_track_info *track_info = &stream_info->stream_info.video_track_info[i];
+        qDebug() << "skedplayer video" << "format" << track_info->vidCodecFmt
+                 << track_info->width << "x" << track_info->height
+                 << track_info->framerate << "fps";
+      }
+      aui_mp_free_stream_info(m_mp_handle, stream_info);
+    } else {
+      qWarning() << "skedplayer can not get video info";
+    }
     if (! m_fullscreen) {
       aui_mp_set_display_rect(m_mp_handle, m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
     }
@@ -450,18 +471,22 @@ static void _callback(aui_mp_message type, void *data, void *userData)
     break;
   case AUI_MP_VIDEO_CODEC_NOT_SUPPORT:
     qWarning() << "[callback] UNSUPPORT VIDEO";
+    QMetaObject::invokeMethod(SkedPlayer::singleton(), "error", Qt::QueuedConnection, Q_ARG(int, SkedPlayer::ERROR_DECODE));
     break;
   case AUI_MP_AUDIO_CODEC_NOT_SUPPORT:
     qWarning() << "[callback] UNSUPPORT AUDIO";
     break;
   case AUI_MP_RESOLUTION_NOT_SUPPORT:
     qWarning() << "[callback] RESOLUTION NOT SUPPORT";
+    QMetaObject::invokeMethod(SkedPlayer::singleton(), "error", Qt::QueuedConnection, Q_ARG(int, SkedPlayer::ERROR_DECODE));
     break;
   case AUI_MP_FRAMERATE_NOT_SUPPORT:
     qWarning() << "[callback] FRAMERATE NOT SUPPORT";
+    QMetaObject::invokeMethod(SkedPlayer::singleton(), "error", Qt::QueuedConnection, Q_ARG(int, SkedPlayer::ERROR_DECODE));
     break;
   case AUI_MP_NO_MEMORY:
     qWarning() << "[callback] NO MEMORY";
+    QMetaObject::invokeMethod(SkedPlayer::singleton(), "error", Qt::QueuedConnection, Q_ARG(int, SkedPlayer::ERROR_SYSTEM));
     break;
   case AUI_MP_DECODE_ERROR:
     qWarning() << "[callback] DECODE ERROR";
@@ -469,6 +494,7 @@ static void _callback(aui_mp_message type, void *data, void *userData)
     break;
   case AUI_MP_ERROR_UNKNOWN:
     qWarning() << "[callback] UNKNOW ERROR:" << (char *)data;
+    QMetaObject::invokeMethod(SkedPlayer::singleton(), "error", Qt::QueuedConnection, Q_ARG(int, SkedPlayer::ERROR_SYSTEM));
     break;
   case AUI_MP_ERROR_SOUPHTTP:
     qWarning() << "[callback] Soup http error, code:" << (int)data;
