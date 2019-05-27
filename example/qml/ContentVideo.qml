@@ -311,6 +311,30 @@ Rectangle {
     }
 
     Keys.onPressed: {
+        function testSwitchAudioTrack() {
+          if (Player.audioTracks.length >= 2) {
+            for (var i = 0; i < Player.audioTracks.length; i++) {
+              if (Player.audioTracks[i].enable) {
+                var id = Player.audioTracks[(i+1)%Player.audioTracks.length].id;
+                console.log("switching to audio", id);
+                Player.currentAudioTrack = id;
+                break;
+              }
+            }
+          }
+        }
+        function testSwitchSubtitleTrack() {
+          if (Player.subtitleTracks.length >= 2) {
+            for (var i = 0; i < Player.subtitleTracks.length; i++) {
+              if (Player.subtitleTracks[i].enable) {
+                var id = Player.subtitleTracks[(i+1)%Player.subtitleTracks.length].id;
+                console.log("switching to subtitle", id);
+                Player.currentSubtitleTrack = id;
+                break;
+              }
+            }
+          }
+        }
         console.debug('[video player] key pressed. code: ' + event.key);
         switch (event.key) {
         case Qt.Key_Escape:
@@ -389,6 +413,17 @@ Rectangle {
         case Qt.Key_6:
             Player.displayrect = Qt.rect(650, 220, 320, 204);
             if (Player.fullscreen) Player.fullscreen = false;
+            break;
+        case Qt.Key_I:
+            console.log("audio tracks", JSON.stringify(Player.audioTracks, null, 2));
+            console.log("video tracks", JSON.stringify(Player.videoTracks, null, 2));
+            console.log("subtitle tracks", JSON.stringify(Player.subtitleTracks, null, 2));
+            break;
+        case Qt.Key_Red:
+            testSwitchAudioTrack();
+            break;
+        case Qt.Key_Green:
+            testSwitchSubtitleTrack();
             break;
         default:
             return;

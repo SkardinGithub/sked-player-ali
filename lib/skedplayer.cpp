@@ -12,6 +12,8 @@ SkedPlayer * SkedPlayer::m_instance = NULL;
 
 static void _callback(aui_mp_message type, void *data, void *userData);
 static enum aui_mp_speed rateToAuiMpSpeed(double rate);
+static QString toAudioCodecName(int codec);
+static QString toVideoCodecName(int codec);
 
 SkedPlayer::SkedPlayer(QObject *parent) : QObject(parent)
 {
@@ -47,6 +49,9 @@ void SkedPlayer::setSrc(const QString &src)
   m_playback_rate = 1;
   m_buffer_level = 0;
   m_fullscreen = true;
+  m_audio_tracks.clear();
+  m_video_tracks.clear();
+  m_subtitle_tracks.clear();
   if (m_state != STATE_STOP) {
     if (m_mp_handle) {
       aui_mp_close(NULL, &m_mp_handle);
@@ -393,6 +398,139 @@ void SkedPlayer::displayEnableVideo(bool on)
 #endif
 }
 
+QVariantList SkedPlayer::videoTracks()
+{
+  if (m_state == STATE_STOP)
+    return QVariantList();
+
+  if (!m_video_tracks.isEmpty())
+    return m_video_tracks;
+
+  aui_mp_stream_info *stream_info;
+  if (AUI_RTN_SUCCESS == aui_mp_get_stream_info(m_mp_handle, AUI_MP_STREAM_INFO_TYPE_VIDEO, &stream_info)) {
+    for (unsigned int i = 0; i < stream_info->count; i++) {
+      aui_mp_video_track_info *track_info = &stream_info->stream_info.video_track_info[i];
+      QVariantMap track;
+      track["id"] = int(0);
+      track["width"] = int(track_info->width);
+      track["height"] = int(track_info->height);
+      track["framerate"] = double(track_info->framerate) / 1000;
+      track["format"] = toVideoCodecName(track_info->vidCodecFmt);
+      track["enable"] = true;
+      m_video_tracks.append(track);
+    }
+    aui_mp_free_stream_info(m_mp_handle, stream_info);
+  }
+
+  return m_video_tracks;
+}
+
+QVariantList SkedPlayer::audioTracks()
+{
+  if (m_state == STATE_STOP)
+    return QVariantList();
+
+  if (!m_audio_tracks.isEmpty())
+    return m_audio_tracks;
+
+  aui_mp_stream_info *stream_info = NULL;
+  aui_mp_stream_info *cur_stream_info = NULL;
+
+  if (AUI_RTN_SUCCESS != aui_mp_get_cur_stream_info(m_mp_handle, AUI_MP_STREAM_INFO_TYPE_AUDIO, &cur_stream_info)) {
+    return QVariantList();
+  }
+  if (AUI_RTN_SUCCESS != aui_mp_get_stream_info(m_mp_handle, AUI_MP_STREAM_INFO_TYPE_AUDIO, &stream_info)) {
+    aui_mp_free_stream_info(m_mp_handle, cur_stream_info);
+    return QVariantList();
+  }
+
+  aui_mp_audio_track_info *cur_track_info = &cur_stream_info->stream_info.audio_track_info[0];
+
+  for (unsigned int i = 0; i < stream_info->count; i++) {
+    aui_mp_audio_track_info *track_info = &stream_info->stream_info.audio_track_info[i];
+    QVariantMap track;
+    track["id"] = int(track_info->track_index);
+    track["lang"] = QString::fromLatin1(track_info->lang_code, 3);
+    if (track_info->audDetailInfo) {
+      track["format"] = toAudioCodecName(track_info->audDetailInfo->audioCodecType);
+      track["channels"] = int(track_info->audDetailInfo->channels);
+    }
+    if (track_info->track_index == cur_track_info->track_index) {
+      track["enable"] = true;
+      track["lang"] = QString::fromLatin1(cur_track_info->lang_code, 3);
+      if (cur_track_info->audDetailInfo) {
+        track["format"] = toAudioCodecName(cur_track_info->audDetailInfo->audioCodecType);
+        track["channels"] = int(cur_track_info->audDetailInfo->channels);
+      }
+    } else {
+      track["enable"] = false;
+    }
+    m_audio_tracks.append(track);
+  }
+
+  aui_mp_free_stream_info(m_mp_handle, cur_stream_info);
+  aui_mp_free_stream_info(m_mp_handle, stream_info);
+
+  return m_audio_tracks;
+}
+
+QVariantList SkedPlayer::subtitleTracks()
+{
+  if (m_state == STATE_STOP)
+    return QVariantList();
+
+  if (!m_subtitle_tracks.isEmpty())
+    return m_subtitle_tracks;
+
+  aui_mp_stream_info *stream_info = NULL;
+  aui_mp_stream_info *cur_stream_info = NULL;
+
+  if (AUI_RTN_SUCCESS != aui_mp_get_cur_stream_info(m_mp_handle, AUI_MP_STREAM_INFO_TYPE_SUBTITLE, &cur_stream_info)) {
+    return QVariantList();
+  }
+  if (AUI_RTN_SUCCESS != aui_mp_get_stream_info(m_mp_handle, AUI_MP_STREAM_INFO_TYPE_SUBTITLE, &stream_info)) {
+    aui_mp_free_stream_info(m_mp_handle, cur_stream_info);
+    return QVariantList();
+  }
+
+  aui_mp_subtitle_info *cur_track_info = &cur_stream_info->stream_info.subtitle_info[0];
+
+  for (unsigned int i = 0; i < stream_info->count; i++) {
+    aui_mp_subtitle_info *track_info = &stream_info->stream_info.subtitle_info[i];
+    QVariantMap track;
+    track["id"] = int(track_info->track_index);
+    track["lang"] = QString::fromLatin1(track_info->lang_code, 3);
+    if (track_info->track_index == cur_track_info->track_index) {
+      track["enable"] = true;
+      track["lang"] = QString::fromLatin1(cur_track_info->lang_code, 3);
+    } else {
+      track["enable"] = false;
+    }
+    m_subtitle_tracks.append(track);
+  }
+
+  aui_mp_free_stream_info(m_mp_handle, cur_stream_info);
+  aui_mp_free_stream_info(m_mp_handle, stream_info);
+
+  return m_subtitle_tracks;
+}
+
+bool SkedPlayer::setCurrentAudioTrack(int track_index)
+{
+  if (m_state == STATE_STOP)
+    return false;
+  m_audio_tracks.clear();
+  return (AUI_RTN_SUCCESS == aui_mp_change_audio(m_mp_handle, track_index));
+}
+
+bool SkedPlayer::setCurrentSubtitleTrack(int track_index)
+{
+  if (m_state == STATE_STOP)
+    return false;
+  m_subtitle_tracks.clear();
+  return (AUI_RTN_SUCCESS == aui_mp_change_subtitle(m_mp_handle, track_index));
+}
+
 void SkedPlayer::onEnded()
 {
   qDebug() << "skedplayer onEnded";
@@ -409,27 +547,6 @@ void SkedPlayer::onEnded()
 void SkedPlayer::onStart()
 {
   if (!m_inited) {
-    aui_mp_stream_info *stream_info;
-    if (AUI_RTN_SUCCESS == aui_mp_get_cur_stream_info(m_mp_handle, AUI_MP_STREAM_INFO_TYPE_AUDIO, &stream_info)) {
-      for (unsigned int i = 0; i < stream_info->count; i++) {
-        aui_mp_audio_track_info *track_info = &stream_info->stream_info.audio_track_info[i];
-        qDebug() << "skedplayer audio" << track_info->track_index << QString::fromLatin1(track_info->lang_code, 5);
-      }
-      aui_mp_free_stream_info(m_mp_handle, stream_info);
-    } else {
-      qWarning() << "skedplayer can not get audio info";
-    }
-    if (AUI_RTN_SUCCESS == aui_mp_get_cur_stream_info(m_mp_handle, AUI_MP_STREAM_INFO_TYPE_VIDEO, &stream_info)) {
-      for (unsigned int i = 0; i < stream_info->count; i++) {
-        aui_mp_video_track_info *track_info = &stream_info->stream_info.video_track_info[i];
-        qDebug() << "skedplayer video" << "format" << track_info->vidCodecFmt
-                 << track_info->width << "x" << track_info->height
-                 << track_info->framerate << "fps";
-      }
-      aui_mp_free_stream_info(m_mp_handle, stream_info);
-    } else {
-      qWarning() << "skedplayer can not get video info";
-    }
     if (! m_fullscreen) {
       aui_mp_set_display_rect(m_mp_handle, m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
     }
@@ -543,6 +660,94 @@ static enum aui_mp_speed rateToAuiMpSpeed(double rate) {
     qDebug() << "skedplayer" << "FF" << 24;
     return AUI_MP_SPEED_FASTFORWARD_24;
   }
+}
+
+static QString toAudioCodecName(int codec)
+{
+  switch (codec) {
+  case AUI_DECA_STREAM_TYPE_MPEG1:
+    return "MPEG1";
+  case AUI_DECA_STREAM_TYPE_MPEG2:
+    return "MPEG2";
+  case AUI_DECA_STREAM_TYPE_AAC_LATM:
+    return "AAC";
+  case AUI_DECA_STREAM_TYPE_AC3:
+    return "AC3";
+  case AUI_DECA_STREAM_TYPE_DTS:
+    return "DTA";
+  case AUI_DECA_STREAM_TYPE_PPCM:
+    return "PCM";
+  case AUI_DECA_STREAM_TYPE_LPCM_V:
+    return "LPCM";
+  case AUI_DECA_STREAM_TYPE_LPCM_A:
+    return "LPCM";
+  case AUI_DECA_STREAM_TYPE_PCM:
+    return "PCM";
+  case AUI_DECA_STREAM_TYPE_BYE1:
+    return "BYE1";
+  case AUI_DECA_STREAM_TYPE_RA8:
+    return "RA8";
+  case AUI_DECA_STREAM_TYPE_MP3:
+    return "MP3";
+  case AUI_DECA_STREAM_TYPE_AAC_ADTS:
+    return "AAC";
+  case AUI_DECA_STREAM_TYPE_OGG:
+    return "OGG";
+  case AUI_DECA_STREAM_TYPE_EC3:
+    return "EC3";
+  case AUI_DECA_STREAM_TYPE_MP3_L3:
+    return "MP3";
+  case AUI_DECA_STREAM_TYPE_RAW_PCM:
+    return "PCM";
+  case AUI_DECA_STREAM_TYPE_BYE1PRO:
+    return "BYE1PRO";
+  case AUI_DECA_STREAM_TYPE_FLAC:
+    return "FLAC";
+  case AUI_DECA_STREAM_TYPE_APE:
+    return "APE";
+  case AUI_DECA_STREAM_TYPE_MP3_2:
+    return "MP3";
+  case AUI_DECA_STREAM_TYPE_AMR:
+    return "AMR";
+  case AUI_DECA_STREAM_TYPE_ADPCM:
+    return "ADPCM";
+  default:
+    return "UNKNOWN";
+  }
+
+  return "UNKNOWN";
+}
+
+static QString toVideoCodecName(int codec)
+{
+  switch (codec) {
+  case AUI_DECV_FORMAT_MPEG:
+    return "MPEG";
+  case AUI_DECV_FORMAT_AVC:
+    return "H264";
+  case AUI_DECV_FORMAT_AVS:
+    return "AVS";
+  case AUI_DECV_FORMAT_XVID:
+    return "XVID";
+  case AUI_DECV_FORMAT_FLV1:
+    return "FLV";
+  case AUI_DECV_FORMAT_VP8:
+    return "VP8";
+  case AUI_DECV_FORMAT_WVC1:
+    return "WVC1";
+  case AUI_DECV_FORMAT_WX3:
+    return "WX3";
+  case AUI_DECV_FORMAT_RMVB:
+    return "RMVB";
+  case AUI_DECV_FORMAT_MJPG:
+    return "MJPEG";
+  case AUI_DECV_FORMAT_HEVC:
+    return "H265";
+  default:
+    return "UNKNOWN";
+  }
+
+  return "UNKNOWN";
 }
 
 static QString getBookMarkFileName(const QString &src)

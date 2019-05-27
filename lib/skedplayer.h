@@ -18,6 +18,11 @@ class SkedPlayer : public QObject
     Q_PROPERTY(QRect displayrect READ getDisplayRect WRITE setDisplayRect NOTIFY displayRectChange)
     Q_PROPERTY(bool fullscreen READ getFullScreen WRITE setFullScreen NOTIFY displayRectChange)
     Q_PROPERTY(int bufferLevel READ getBufferLevel NOTIFY buffering)
+    Q_PROPERTY(QVariantList videoTracks READ videoTracks)
+    Q_PROPERTY(QVariantList audioTracks READ audioTracks)
+    Q_PROPERTY(QVariantList subtitleTracks READ subtitleTracks)
+    Q_PROPERTY(int currentAudioTrack WRITE setCurrentAudioTrack)
+    Q_PROPERTY(int currentSubtitleTrack WRITE setCurrentSubtitleTrack)
 
 public:
     explicit SkedPlayer(QObject *parent = 0);
@@ -78,6 +83,11 @@ private:
     void setFullScreen(bool full);
     bool seekable();
     int getBufferLevel() { return m_buffer_level; }
+    QVariantList audioTracks();
+    QVariantList videoTracks();
+    QVariantList subtitleTracks();
+    bool setCurrentAudioTrack(int track_index);
+    bool setCurrentSubtitleTrack(int track_index);
     void displayFillBlack();
     void displayEnableVideo(bool on);
     void saveStopTime();
@@ -95,5 +105,8 @@ private:
     bool m_inited;
     void *m_mp_handle;
     int m_buffer_level;
+    QVariantList m_audio_tracks;
+    QVariantList m_video_tracks;
+    QVariantList m_subtitle_tracks;
 };
 #endif // SKEDPLAYER_H

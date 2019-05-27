@@ -288,6 +288,9 @@ Rectangle {
             console.debug('[audio player] Ch-')
             playPrev();
             break;
+        case Qt.Key_I:
+            console.log("audio tracks", JSON.stringify(Player.audioTracks, null, 2));
+            break;
         default:
             return;
         }
