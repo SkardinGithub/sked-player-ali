@@ -14,6 +14,7 @@ static void _callback(aui_mp_message type, void *data, void *userData);
 static enum aui_mp_speed rateToAuiMpSpeed(double rate);
 static QString toAudioCodecName(int codec);
 static QString toVideoCodecName(int codec);
+static aui_hdl getAuiSoundHandle();
 
 SkedPlayer::SkedPlayer(QObject *parent) : QObject(parent)
 {
@@ -120,6 +121,7 @@ void SkedPlayer::load()
     emit stateChange(oldState, m_state);
   }
   displayFillBlack();
+  soundSetOutMode();
   timer.restart();
   aui_attr_mp mp_attr;
   memset(&mp_attr, 0, sizeof(mp_attr));
@@ -232,93 +234,52 @@ void SkedPlayer::setVolume(double vol)
 {
   qDebug() << "skedplayer setVolume" << vol;
 
-  aui_hdl hdl_snd;
-  if (0 != aui_find_dev_by_idx(AUI_MODULE_SND, 0, &hdl_snd)) {
-    aui_attr_snd attr_snd;
-    memset(&attr_snd, 0, sizeof(aui_attr_snd));
-    if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
-      qWarning() << "skedplayer aui_snd_open fail";
-      return;
-    } else {
-      qDebug() << "skedplayer aui_snd_open OK";
-    }
-  }
+  aui_hdl hdl_snd = getAuiSoundHandle();
+  if (hdl_snd == NULL) return;
+
   if (0 != aui_snd_vol_set(hdl_snd, vol * 100 + 0.5)) {
     qWarning() << "skedplayer aui_snd_vol_set fail";
-    //aui_snd_close(hdl_snd);
     return;
   }
   unsigned char mute;
   aui_snd_mute_get(hdl_snd, &mute);
-  //aui_snd_close(hdl_snd);
   emit volumeChange(mute, vol);
 }
 
 double SkedPlayer::getVolume()
 {
-  aui_hdl hdl_snd;
-  if (0 != aui_find_dev_by_idx(AUI_MODULE_SND, 0, &hdl_snd)) {
-    aui_attr_snd attr_snd;
-    memset(&attr_snd, 0, sizeof(aui_attr_snd));
-    if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
-      qWarning() << "skedplayer aui_snd_open fail";
-      return 0;
-    } else {
-      qDebug() << "skedplayer aui_snd_open OK";
-    }
-  }
+  aui_hdl hdl_snd = getAuiSoundHandle();
+  if (hdl_snd == NULL) return 0;
   unsigned char vol = 0;
   if (0 != aui_snd_vol_get(hdl_snd, &vol)) {
     qWarning() << "skedplayer aui_snd_vol_get fail";
   }
-  //aui_snd_close(hdl_snd);
   return vol / 100.0;
 }
 
 void SkedPlayer::mute(bool mute)
 {
   qDebug() << "skedplayer " << (mute ? "mute" : "unmute");
-  aui_hdl hdl_snd;
-  if (0 != aui_find_dev_by_idx(AUI_MODULE_SND, 0, &hdl_snd)) {
-    aui_attr_snd attr_snd;
-    memset(&attr_snd, 0, sizeof(aui_attr_snd));
-    if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
-      qWarning() << "skedplayer aui_snd_open fail";
-      return;
-    } else {
-      qDebug() << "skedplayer aui_snd_open OK";
-    }
-  }
+  aui_hdl hdl_snd = getAuiSoundHandle();
+  if (hdl_snd == NULL) return;
   if (0 != aui_snd_mute_set(hdl_snd, mute)) {
     qWarning() << "skedplayer aui_snd_mute_set fail";
-    //aui_snd_close(hdl_snd);
     return;
   }
   unsigned char vol;
   aui_snd_vol_get(hdl_snd, &vol);
-  //aui_snd_close(hdl_snd);
   emit volumeChange(mute, vol/100.0);
 }
 
 bool SkedPlayer::muted()
 {
-  aui_hdl hdl_snd;
-  if (0 != aui_find_dev_by_idx(AUI_MODULE_SND, 0, &hdl_snd)) {
-    aui_attr_snd attr_snd;
-    memset(&attr_snd, 0, sizeof(aui_attr_snd));
-    if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
-      qWarning() << "skedplayer aui_snd_open fail";
-      return true;
-    } else {
-      qDebug() << "skedplayer aui_snd_open OK";
-    }
-  }
+  aui_hdl hdl_snd = getAuiSoundHandle();
+  if (hdl_snd == NULL) return true;
   unsigned char mute = 1;
   if (0 != aui_snd_mute_get(hdl_snd, &mute)) {
     qWarning() << "skedplayer aui_snd_mute_get fail";
   }
-  //aui_snd_close(hdl_snd);
-  return mute;
+  return (mute != 0);
 }
 
 void SkedPlayer::setDisplayRect(const QRect & rect)
@@ -396,6 +357,25 @@ void SkedPlayer::displayEnableVideo(bool on)
     qWarning() << "skedplayer aui_dis_close fail";
   }
 #endif
+}
+
+void SkedPlayer::soundSetOutMode()
+{
+  aui_snd_out_mode out_mode;
+  memset(&out_mode, 0, sizeof(aui_snd_out_mode));
+  //out_mode.snd_data_type = AUI_SND_OUT_MODE_DECODED;
+  out_mode.snd_data_type = AUI_SND_OUT_MODE_FORCE_DD;
+  //out_mode.snd_data_type = AUI_SND_OUT_MODE_ENCODED;
+  out_mode.snd_out_type = AUI_SND_OUT_HDMI;
+
+  aui_hdl snd = getAuiSoundHandle();
+  if (AUI_RTN_SUCCESS != aui_snd_out_data_type_set(snd, out_mode)) {
+    qWarning() << "aui_snd_out_data_type_set() failed";
+  } else {
+    qDebug() << "set sound out mode to" <<
+              ((AUI_SND_OUT_MODE_ENCODED == out_mode.snd_data_type) ? "DD+" :
+              ((AUI_SND_OUT_MODE_FORCE_DD == out_mode.snd_data_type) ? "DD" : "PCM"));
+  }
 }
 
 QVariantList SkedPlayer::videoTracks()
@@ -620,6 +600,20 @@ static void _callback(aui_mp_message type, void *data, void *userData)
   default:
     break;
   }
+}
+
+static aui_hdl getAuiSoundHandle() {
+  aui_hdl hdl_snd;
+  if (0 != aui_find_dev_by_idx(AUI_MODULE_SND, 0, &hdl_snd)) {
+    aui_attr_snd attr_snd;
+    memset(&attr_snd, 0, sizeof(aui_attr_snd));
+    if (0 != aui_snd_open(&attr_snd, &hdl_snd)) {
+      qWarning() << "skedplayer aui_snd_open fail";
+      return NULL;
+    }
+  }
+
+  return hdl_snd;
 }
 
 static enum aui_mp_speed rateToAuiMpSpeed(double rate) {

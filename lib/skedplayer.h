@@ -90,6 +90,7 @@ private:
     bool setCurrentSubtitleTrack(int track_index);
     void displayFillBlack();
     void displayEnableVideo(bool on);
+    void soundSetOutMode();
     void saveStopTime();
     void clearStopTime();
 
