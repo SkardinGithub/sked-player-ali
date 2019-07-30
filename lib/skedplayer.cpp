@@ -15,6 +15,7 @@ static enum aui_mp_speed rateToAuiMpSpeed(double rate);
 static QString toAudioCodecName(int codec);
 static QString toVideoCodecName(int codec);
 static aui_hdl getAuiSoundHandle();
+static aui_hdl getAuiDisplayHandle();
 
 SkedPlayer::SkedPlayer(QObject *parent) : QObject(parent)
 {
@@ -306,57 +307,21 @@ void SkedPlayer::setFullScreen(bool full)
 void SkedPlayer::displayFillBlack()
 {
   qDebug() << "skedplayer display fill black";
-  void *dis_hdl_hd = 0;
-  aui_attr_dis attr_dis_hd;
-  memset(&attr_dis_hd, 0, sizeof(attr_dis_hd));
-  attr_dis_hd.uc_dev_idx = AUI_DIS_HD;
-
-  if(0 != aui_find_dev_by_idx(AUI_MODULE_DIS, 0, &dis_hdl_hd)) {
-    if(0 != aui_dis_open(&attr_dis_hd, &dis_hdl_hd)) {
-      qWarning() << "skedplayer aui_dis_open fail";
-      return;
-    } else {
-      qDebug() << "skedplayer aui_dis_open OK";
-    }
-  }
-
-  if(0 != aui_dis_fill_black_screen(dis_hdl_hd)) {
+  aui_hdl dis_hdl = getAuiDisplayHandle();
+  if (dis_hdl == NULL) return;
+  if(0 != aui_dis_fill_black_screen(dis_hdl)) {
     qWarning() << "skedplayer aui_dis_fill_black_screen fail";
   }
-
-#if 0
-  if(0 != aui_dis_close(&attr_dis_hd, &dis_hdl_hd)) {
-    qWarning() << "skedplayer aui_dis_close fail";
-  }
-#endif
 }
 
 void SkedPlayer::displayEnableVideo(bool on)
 {
   qDebug() << "skedplayer" << (on ? "enable" : "disable") << "display";
-  void *dis_hdl_hd = 0;
-  aui_attr_dis attr_dis_hd;
-  memset(&attr_dis_hd, 0, sizeof(attr_dis_hd));
-  attr_dis_hd.uc_dev_idx = AUI_DIS_HD;
-
-  if(0 != aui_find_dev_by_idx(AUI_MODULE_DIS, 0, &dis_hdl_hd)) {
-    if(0 != aui_dis_open(&attr_dis_hd, &dis_hdl_hd)) {
-      qWarning() << "skedplayer aui_dis_open fail";
-      return;
-    } else {
-      qDebug() << "skedplayer aui_dis_open OK";
-    }
-  }
-
-  if(0 != aui_dis_video_enable(dis_hdl_hd, on)) {
+  aui_hdl dis_hdl = getAuiDisplayHandle();
+  if (dis_hdl == NULL) return;
+  if(0 != aui_dis_video_enable(dis_hdl, on)) {
     qWarning() << "skedplayer aui_dis_video_enable fail";
   }
-
-#if 0
-  if(0 != aui_dis_close(&attr_dis_hd, &dis_hdl_hd)) {
-    qWarning() << "skedplayer aui_dis_close fail";
-  }
-#endif
 }
 
 void SkedPlayer::soundSetOutMode()
@@ -602,7 +567,8 @@ static void _callback(aui_mp_message type, void *data, void *userData)
   }
 }
 
-static aui_hdl getAuiSoundHandle() {
+static aui_hdl getAuiSoundHandle()
+{
   aui_hdl hdl_snd;
   if (0 != aui_find_dev_by_idx(AUI_MODULE_SND, 0, &hdl_snd)) {
     aui_attr_snd attr_snd;
@@ -614,6 +580,23 @@ static aui_hdl getAuiSoundHandle() {
   }
 
   return hdl_snd;
+}
+
+static aui_hdl getAuiDisplayHandle()
+{
+  aui_hdl dis_hdl_hd;
+
+  if (0 != aui_find_dev_by_idx(AUI_MODULE_DIS, 0, &dis_hdl_hd)) {
+    aui_attr_dis attr_dis_hd;
+    memset(&attr_dis_hd, 0, sizeof(attr_dis_hd));
+    attr_dis_hd.uc_dev_idx = AUI_DIS_HD;
+    if (0 != aui_dis_open(&attr_dis_hd, &dis_hdl_hd)) {
+      qWarning() << "skedplayer aui_dis_open fail";
+      return NULL;
+    }
+  }
+
+  return dis_hdl_hd;
 }
 
 static enum aui_mp_speed rateToAuiMpSpeed(double rate) {

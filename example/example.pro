@@ -2,6 +2,7 @@ TEMPLATE = app
 TARGET = skedplayer-example
 QT += quick widgets
 CONFIG += c++11
+CONFIG += qtquickcompiler
 CONFIG += debug
 
 # Build directory
