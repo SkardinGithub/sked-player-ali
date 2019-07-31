@@ -91,6 +91,7 @@ private:
     bool stop_i();
     void displayFillBlack();
     void displayEnableVideo(bool on);
+    void displayAutoVideo(bool on);
     void soundSetOutMode();
     void saveStopTime();
     void clearStopTime();
@@ -110,5 +111,6 @@ private:
     QVariantList m_audio_tracks;
     QVariantList m_video_tracks;
     QVariantList m_subtitle_tracks;
+    QElapsedTimer m_stop_elapsed_timer;
 };
 #endif // SKEDPLAYER_H

@@ -8,6 +8,8 @@ extern "C" {
 #include <aui_decv.h>
 }
 
+#define DISPLAY_AUTO_VIDEO_ON_OFF
+
 SkedPlayer * SkedPlayer::m_instance = NULL;
 
 static void _callback(aui_mp_message type, void *data, void *userData);
@@ -76,8 +78,13 @@ bool SkedPlayer::stop_i()
       aui_mp_close(NULL, &m_mp_handle);
       m_mp_handle = NULL;
     }
-    //displayEnableVideo(false);
+#ifdef DISPLAY_AUTO_VIDEO_ON_OFF
+    displayAutoVideo(false);
+#else
+    displayEnableVideo(false);
     displayFillBlack();
+#endif
+    m_stop_elapsed_timer.restart();
     enum STATE oldState = m_state;
     m_state = STATE_STOP;
     emit stateChange(oldState, m_state);
@@ -106,7 +113,17 @@ void SkedPlayer::load()
   if (m_state != STATE_STOP) {
     stop_i();
   }
+  {
+     qint64 elapsed = m_stop_elapsed_timer.elapsed();
+     if (elapsed >= 0 && elapsed < 500) {
+        QThread::msleep(500 - elapsed);
+     }
+  }
+#ifdef DISPLAY_AUTO_VIDEO_ON_OFF
+  displayAutoVideo(true);
+#else
   displayFillBlack();
+#endif
   soundSetOutMode();
   aui_attr_mp mp_attr;
   memset(&mp_attr, 0, sizeof(mp_attr));
@@ -307,13 +324,24 @@ void SkedPlayer::displayEnableVideo(bool on)
   }
 }
 
+void SkedPlayer::displayAutoVideo(bool on)
+{
+  qDebug() << "skedplayer" << (on ? "enable" : "disable") << "auto video display";
+  aui_hdl dis_hdl = getAuiDisplayHandle();
+  if (dis_hdl == NULL) return;
+  quint32 disable = !on;
+  if (0 != aui_dis_set(dis_hdl, AUI_DIS_SET_AUTO_WINONOFF, &disable)) {
+    qWarning() << "skedplayer aui_dis_set AUI_DIS_SET_AUTO_WINONOFF fail";
+  }
+}
+
 void SkedPlayer::soundSetOutMode()
 {
   aui_snd_out_mode out_mode;
   memset(&out_mode, 0, sizeof(aui_snd_out_mode));
   //out_mode.snd_data_type = AUI_SND_OUT_MODE_DECODED;
-  out_mode.snd_data_type = AUI_SND_OUT_MODE_FORCE_DD;
-  //out_mode.snd_data_type = AUI_SND_OUT_MODE_ENCODED;
+  //out_mode.snd_data_type = AUI_SND_OUT_MODE_FORCE_DD;
+  out_mode.snd_data_type = AUI_SND_OUT_MODE_ENCODED;
   out_mode.snd_out_type = AUI_SND_OUT_HDMI;
 
   aui_hdl snd = getAuiSoundHandle();
@@ -478,7 +506,9 @@ void SkedPlayer::onStart()
     if (! m_fullscreen) {
       aui_mp_set_display_rect(m_mp_handle, m_displayrect.left(), m_displayrect.top(), m_displayrect.width(), m_displayrect.height());
     }
+#ifndef DISPLAY_AUTO_VIDEO_ON_OFF
     displayEnableVideo(true);
+#endif
     if (m_buffer_level != 100) {
       m_buffer_level = 100;
       emit buffering(m_buffer_level);
