@@ -55,28 +55,15 @@ void SkedPlayer::setSrc(const QString &src)
   m_video_tracks.clear();
   m_subtitle_tracks.clear();
   if (m_state != STATE_STOP) {
-    if (m_mp_handle) {
-      aui_mp_close(NULL, &m_mp_handle);
-      m_mp_handle = NULL;
-    }
-    //displayEnableVideo(false);
-    displayFillBlack();
-    enum STATE oldState = m_state;
-    m_state = STATE_STOP;
-    emit stateChange(oldState, m_state);
+    stop_i();
   }
 }
 
-bool SkedPlayer::stop()
+bool SkedPlayer::stop_i()
 {
-  qDebug() << "skedplayer stop";
-  m_playback_rate = 1;
-  m_buffer_level = 0;
-  m_fullscreen = true;
+  qDebug() << "skedplayer stop_i";
   if (m_state != STATE_STOP) {
     saveStopTime();
-    QElapsedTimer timer; // measure for bug#8006
-    timer.start();
     if (m_mp_handle) {
       /* TODO: Investigate resource management and correct switch from live view to player and back */
       /* walk around to recover live view after exit from player */
@@ -89,7 +76,6 @@ bool SkedPlayer::stop()
       aui_mp_close(NULL, &m_mp_handle);
       m_mp_handle = NULL;
     }
-    qDebug() << "\n\n\n\n\naui_mp_close took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
     //displayEnableVideo(false);
     displayFillBlack();
     enum STATE oldState = m_state;
@@ -100,6 +86,15 @@ bool SkedPlayer::stop()
   return true;
 }
 
+bool SkedPlayer::stop()
+{
+  qDebug() << "skedplayer stop";
+  m_playback_rate = 1;
+  m_buffer_level = 0;
+  m_fullscreen = true;
+  return stop_i();
+}
+
 void SkedPlayer::load()
 {
   qDebug() << "skedplayer load" << m_src << "from position" << m_start_time;
@@ -108,22 +103,11 @@ void SkedPlayer::load()
   m_buffer_level = 0;
   m_inited = false;
   m_duration = -1;
-  QElapsedTimer timer; // measure for bug#8006
   if (m_state != STATE_STOP) {
-    timer.start();
-    if (m_mp_handle) {
-      aui_mp_close(NULL, &m_mp_handle);
-      m_mp_handle = NULL;
-    }
-    qDebug() << "\n\n\n\n\naui_mp_close took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
-    //displayEnableVideo(false);
-    enum STATE oldState = m_state;
-    m_state = STATE_STOP;
-    emit stateChange(oldState, m_state);
+    stop_i();
   }
   displayFillBlack();
   soundSetOutMode();
-  timer.restart();
   aui_attr_mp mp_attr;
   memset(&mp_attr, 0, sizeof(mp_attr));
   strncpy((char *)mp_attr.uc_file_name, qPrintable(m_src), 1024);
@@ -133,7 +117,6 @@ void SkedPlayer::load()
   mp_attr.user_data = NULL;
   aui_mp_open(&mp_attr, &m_mp_handle);
   aui_mp_start(m_mp_handle);
-  qDebug() << "\n\n\n\n\aui_mp_open + aui_mp_start took" << timer.elapsed() << "milliseconds\n\n\n\n\n";
   m_start_time = 0;
   emit rateChange(m_playback_rate);
   emit displayRectChange(m_fullscreen, m_displayrect);

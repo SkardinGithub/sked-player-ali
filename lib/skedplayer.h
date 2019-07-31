@@ -88,6 +88,7 @@ private:
     QVariantList subtitleTracks();
     bool setCurrentAudioTrack(int track_index);
     bool setCurrentSubtitleTrack(int track_index);
+    bool stop_i();
     void displayFillBlack();
     void displayEnableVideo(bool on);
     void soundSetOutMode();
