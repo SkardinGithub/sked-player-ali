@@ -209,8 +209,11 @@ void SkedPlayer::setCurrentTime(double time)
 double SkedPlayer::duration()
 {
   if (m_state == STATE_STOP) return -1;
-  if (m_state == STATE_ENDED) return m_duration;
+  else if (m_state == STATE_ENDED) return m_duration;
+
   if (m_duration != -1) return m_duration;
+  if (m_src.startsWith("udp://")) return -1;
+
   unsigned int total_time;
   if (0 != aui_mp_get_total_time(m_mp_handle, &total_time)) return m_duration;
   m_duration = total_time / 1000.0;
